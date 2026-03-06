@@ -1,0 +1,45 @@
+import SwiftUI
+import SwiftData
+
+@main
+struct ScentBuddyApp: App {
+    var sharedModelContainer: ModelContainer = {
+        let schema = Schema([
+            Perfume.self,
+            WishlistPerfume.self,
+            WearEntry.self,
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        do {
+            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            let fileManager = FileManager.default
+            if let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                let contents = (try? fileManager.contentsOfDirectory(at: appSupport, includingPropertiesForKeys: nil)) ?? []
+                for file in contents where file.lastPathComponent.contains("store") {
+                    try? fileManager.removeItem(at: file)
+                }
+            }
+            do {
+                return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            } catch {
+                let inMemory = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+                return try! ModelContainer(for: schema, configurations: [inMemory])
+            }
+        }
+    }()
+
+    init() {
+        if SupabaseManager.isConfigured {
+            SupabaseAuthService.shared.startListeningIfNeeded()
+        }
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+        .modelContainer(sharedModelContainer)
+    }
+}
