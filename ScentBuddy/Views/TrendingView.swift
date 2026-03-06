@@ -5,51 +5,49 @@ struct TrendingView: View {
     @State private var service = TrendingAPIService()
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    if service.isLoading && service.trendingPerfumes.isEmpty {
-                        loadingView
-                    } else if service.trendingPerfumes.isEmpty {
-                        emptyView
-                    } else {
-                        categoryFilter
-                        trendingContent
-                    }
-                }
-                .padding(.bottom, 20)
-            }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("Trending")
-            .refreshable {
-                await service.fetchTrending(forceRefresh: true)
-            }
-            .overlay {
-                if let error = service.errorMessage, service.trendingPerfumes.isEmpty {
-                    ContentUnavailableView {
-                        Label("Couldn't Load", systemImage: "wifi.slash")
-                    } description: {
-                        Text(error)
-                    } actions: {
-                        Button("Try Again") {
-                            Task { await service.fetchTrending(forceRefresh: true) }
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
+        ScrollView {
+            VStack(spacing: 24) {
+                if service.isLoading && service.trendingPerfumes.isEmpty {
+                    loadingView
+                } else if service.trendingPerfumes.isEmpty {
+                    emptyView
+                } else {
+                    categoryFilter
+                    trendingContent
                 }
             }
-            .task {
-                await service.fetchTrending()
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if service.isLoading && !service.trendingPerfumes.isEmpty {
-                        ProgressView()
-                    } else if let lastUpdated = service.lastUpdated {
-                        Text(lastUpdated, style: .relative)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+            .padding(.bottom, 20)
+        }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("Trending")
+        .refreshable {
+            await service.fetchTrending(forceRefresh: true)
+        }
+        .overlay {
+            if let error = service.errorMessage, service.trendingPerfumes.isEmpty {
+                ContentUnavailableView {
+                    Label("Couldn't Load", systemImage: "wifi.slash")
+                } description: {
+                    Text(error)
+                } actions: {
+                    Button("Try Again") {
+                        Task { await service.fetchTrending(forceRefresh: true) }
                     }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+        .task {
+            await service.fetchTrending()
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if service.isLoading && !service.trendingPerfumes.isEmpty {
+                    ProgressView()
+                } else if let lastUpdated = service.lastUpdated {
+                    Text(lastUpdated, style: .relative)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
         }

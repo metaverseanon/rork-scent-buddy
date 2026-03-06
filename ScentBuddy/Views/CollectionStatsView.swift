@@ -7,25 +7,23 @@ struct CollectionStatsView: View {
     @Query private var wishlist: [WishlistPerfume]
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    overviewCards
-                    if !perfumes.isEmpty {
-                        noteBreakdown
-                        brandDistribution
-                        concentrationBreakdown
-                        seasonBreakdown
-                        topRated
-                        wearInsights
-                    }
+        ScrollView {
+            VStack(spacing: 20) {
+                overviewCards
+                if !perfumes.isEmpty {
+                    noteBreakdown
+                    brandDistribution
+                    concentrationBreakdown
+                    seasonBreakdown
+                    topRated
+                    wearInsights
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
             }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("Stats")
+            .padding(.horizontal)
+            .padding(.bottom, 20)
         }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("Stats")
     }
 
     private var overviewCards: some View {

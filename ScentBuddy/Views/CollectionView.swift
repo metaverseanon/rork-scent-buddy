@@ -13,50 +13,48 @@ struct CollectionView: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if perfumes.isEmpty {
-                    emptyState
-                } else {
-                    VStack(spacing: 20) {
-                        statsBar
-                        filterBar
-                        perfumeGrid
-                    }
-                    .padding(.horizontal)
+        ScrollView {
+            if perfumes.isEmpty {
+                emptyState
+            } else {
+                VStack(spacing: 20) {
+                    statsBar
+                    filterBar
+                    perfumeGrid
                 }
+                .padding(.horizontal)
             }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("My Collection")
-            .searchable(text: $viewModel.searchText, prompt: "Search perfumes...")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        ForEach(SortOption.allCases, id: \.self) { option in
-                            Button {
-                                withAnimation { viewModel.selectedSortOption = option }
-                            } label: {
-                                Label(option.rawValue, systemImage: option.icon)
-                            }
+        }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("My Collection")
+        .searchable(text: $viewModel.searchText, prompt: "Search perfumes...")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    ForEach(SortOption.allCases, id: \.self) { option in
+                        Button {
+                            withAnimation { viewModel.selectedSortOption = option }
+                        } label: {
+                            Label(option.rawValue, systemImage: option.icon)
                         }
-                    } label: {
-                        Image(systemName: "arrow.up.arrow.down.circle")
                     }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.showingAddPerfume = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down.circle")
                 }
             }
-            .sheet(isPresented: $viewModel.showingAddPerfume) {
-                AddPerfumeView()
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.showingAddPerfume = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                }
             }
-            .navigationDestination(for: Perfume.self) { perfume in
-                PerfumeDetailView(perfume: perfume)
-            }
+        }
+        .sheet(isPresented: $viewModel.showingAddPerfume) {
+            AddPerfumeView()
+        }
+        .navigationDestination(for: Perfume.self) { perfume in
+            PerfumeDetailView(perfume: perfume)
         }
     }
 

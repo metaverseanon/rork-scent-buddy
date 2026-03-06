@@ -6,45 +6,33 @@ struct ContentView: View {
     var body: some View {
         TabView {
             Tab("Collection", systemImage: "square.grid.2x2.fill") {
-                CollectionView()
+                NavigationStack {
+                    CollectionView()
+                }
             }
 
             Tab("Diary", systemImage: "book.fill") {
-                WearDiaryView()
-            }
-
-            Tab("Scan", systemImage: "camera.viewfinder") {
-                PhotoScanView()
-            }
-
-            Tab("For You", systemImage: "sparkles") {
-                RecommendationsView()
+                NavigationStack {
+                    WearDiaryView()
+                }
             }
 
             Tab("Trending", systemImage: "flame.fill") {
-                TrendingView()
-            }
-
-            Tab("Stats", systemImage: "chart.bar.fill") {
-                CollectionStatsView()
-            }
-
-            Tab("Compare", systemImage: "arrow.left.arrow.right") {
-                CompareView()
+                NavigationStack {
+                    TrendingView()
+                }
             }
 
             Tab("Wishlist", systemImage: "heart.fill") {
-                WishlistView()
+                NavigationStack {
+                    WishlistView()
+                }
             }
 
             Tab("Profile", systemImage: "person.fill") {
                 NavigationStack {
                     ProfileView()
                 }
-            }
-
-            Tab("Settings", systemImage: "gearshape.fill") {
-                SettingsView()
             }
         }
         .tint(appearanceManager.theme.tintColor)

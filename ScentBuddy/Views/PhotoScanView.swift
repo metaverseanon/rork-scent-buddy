@@ -9,27 +9,25 @@ struct PhotoScanView: View {
     @State private var showingAddPerfume: Bool = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    scanHeader
-                    cameraSection
-                    if !viewModel.recognizedTexts.isEmpty {
-                        recognizedTextSection
-                    }
-                    if !viewModel.matchedPerfumes.isEmpty {
-                        matchedPerfumesSection
-                    }
-                    scanTips
+        ScrollView {
+            VStack(spacing: 20) {
+                scanHeader
+                cameraSection
+                if !viewModel.recognizedTexts.isEmpty {
+                    recognizedTextSection
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
+                if !viewModel.matchedPerfumes.isEmpty {
+                    matchedPerfumesSection
+                }
+                scanTips
             }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("Scan Perfume")
-            .sheet(isPresented: $showingAddPerfume) {
-                AddPerfumeView()
-            }
+            .padding(.horizontal)
+            .padding(.bottom, 20)
+        }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("Scan Perfume")
+        .sheet(isPresented: $showingAddPerfume) {
+            AddPerfumeView()
         }
     }
 

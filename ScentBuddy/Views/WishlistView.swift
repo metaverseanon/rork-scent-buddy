@@ -7,35 +7,33 @@ struct WishlistView: View {
     @State private var showingAddSheet: Bool = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if wishlist.isEmpty {
-                    emptyState
-                } else {
-                    LazyVStack(spacing: 12) {
-                        ForEach(wishlist) { item in
-                            WishlistCard(item: item, onDelete: { deleteItem(item) })
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
-                }
-            }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("Wishlist")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingAddSheet = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
+        ScrollView {
+            if wishlist.isEmpty {
+                emptyState
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(wishlist) { item in
+                        WishlistCard(item: item, onDelete: { deleteItem(item) })
                     }
                 }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 20)
             }
-            .sheet(isPresented: $showingAddSheet) {
-                AddWishlistView()
+        }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("Wishlist")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingAddSheet = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                }
             }
+        }
+        .sheet(isPresented: $showingAddSheet) {
+            AddWishlistView()
         }
     }
 

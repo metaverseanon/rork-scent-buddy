@@ -13,38 +13,36 @@ struct WearDiaryView: View {
     private let calendar = Calendar.current
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    if let scent = scentOfTheDay {
-                        scentOfTheDayCard(scent)
-                    }
-
-                    statsSection
-
-                    calendarSection
-
-                    recentWears
+        ScrollView {
+            VStack(spacing: 20) {
+                if let scent = scentOfTheDay {
+                    scentOfTheDayCard(scent)
                 }
-                .padding(.horizontal)
+
+                statsSection
+
+                calendarSection
+
+                recentWears
             }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("Wear Diary")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingLogWear = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                    }
+            .padding(.horizontal)
+        }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("Wear Diary")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingLogWear = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
                 }
             }
-            .sheet(isPresented: $showingLogWear) {
-                LogWearView()
-            }
-            .task {
-                scentOfTheDay = service.suggest(from: perfumes, wearEntries: wearEntries)
-            }
+        }
+        .sheet(isPresented: $showingLogWear) {
+            LogWearView()
+        }
+        .task {
+            scentOfTheDay = service.suggest(from: perfumes, wearEntries: wearEntries)
         }
     }
 

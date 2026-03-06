@@ -4,9 +4,8 @@ struct SettingsView: View {
     @State private var appearanceManager = AppearanceManager.shared
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Theme") {
+        Form {
+            Section("Theme") {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(AppTheme.allCases, id: \.self) { theme in
@@ -54,16 +53,15 @@ struct SettingsView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 }
 
-                Section("About") {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text("1.0.0")
-                            .foregroundStyle(.secondary)
-                    }
+            Section("About") {
+                HStack {
+                    Text("Version")
+                    Spacer()
+                    Text("1.0.0")
+                        .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Settings")
         }
+        .navigationTitle("Settings")
     }
 }

@@ -14,10 +14,14 @@ struct ProfileView: View {
 
     var body: some View {
         ScrollView {
-            if profileManager.isLoggedIn {
-                loggedInContent
-            } else {
-                signedOutContent
+            VStack(spacing: 20) {
+                if profileManager.isLoggedIn {
+                    loggedInContent
+                } else {
+                    signedOutContent
+                }
+
+                toolsSection
             }
         }
         .background(AppearanceManager.shared.theme.backgroundColor)
@@ -31,6 +35,52 @@ struct ProfileView: View {
         .sheet(isPresented: $showingEditProfile) {
             EditProfileView()
         }
+    }
+
+    private var toolsSection: some View {
+        VStack(spacing: 0) {
+            NavigationLink {
+                RecommendationsView()
+            } label: {
+                ProfileMenuRow(icon: "sparkles", title: "For You", subtitle: "Personalized recommendations", color: .orange)
+            }
+
+            Divider().padding(.leading, 56)
+
+            NavigationLink {
+                PhotoScanView()
+            } label: {
+                ProfileMenuRow(icon: "camera.viewfinder", title: "Scan Perfume", subtitle: "Identify bottles with your camera", color: .blue)
+            }
+
+            Divider().padding(.leading, 56)
+
+            NavigationLink {
+                CollectionStatsView()
+            } label: {
+                ProfileMenuRow(icon: "chart.bar.fill", title: "Stats", subtitle: "Collection analytics & insights", color: .purple)
+            }
+
+            Divider().padding(.leading, 56)
+
+            NavigationLink {
+                CompareView()
+            } label: {
+                ProfileMenuRow(icon: "arrow.left.arrow.right", title: "Compare", subtitle: "Side-by-side fragrance comparison", color: .teal)
+            }
+
+            Divider().padding(.leading, 56)
+
+            NavigationLink {
+                SettingsView()
+            } label: {
+                ProfileMenuRow(icon: "gearshape.fill", title: "Settings", subtitle: "Theme & preferences", color: .gray)
+            }
+        }
+        .background(AppearanceManager.shared.theme.cardColor)
+        .clipShape(.rect(cornerRadius: 16))
+        .padding(.horizontal)
+        .padding(.bottom, 20)
     }
 
     private var signedOutContent: some View {
@@ -112,7 +162,6 @@ struct ProfileView: View {
             accountActions
         }
         .padding(.horizontal)
-        .padding(.bottom, 20)
     }
 
     private var profileHeader: some View {
@@ -300,6 +349,41 @@ struct ProfileView: View {
         guard !rated.isEmpty else { return nil }
         let total = rated.reduce(0) { $0 + $1.rating }
         return Double(total) / Double(rated.count)
+    }
+}
+
+struct ProfileMenuRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundStyle(color)
+                .frame(width: 32, height: 32)
+                .background(color.opacity(0.12))
+                .clipShape(.rect(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

@@ -10,38 +10,36 @@ struct RecommendationsView: View {
     private let service = RecommendationService()
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, minHeight: 300)
-                } else if recommendations.isEmpty {
-                    emptyState
-                } else {
-                    VStack(spacing: 20) {
-                        headerCard
-                        recommendationsList
-                    }
-                    .padding(.horizontal)
+        ScrollView {
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, minHeight: 300)
+            } else if recommendations.isEmpty {
+                emptyState
+            } else {
+                VStack(spacing: 20) {
+                    headerCard
+                    recommendationsList
+                }
+                .padding(.horizontal)
+            }
+        }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("For You")
+        .refreshable {
+            await loadRecommendations()
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await loadRecommendations() }
+                } label: {
+                    Image(systemName: "arrow.trianglehead.2.clockwise")
                 }
             }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("For You")
-            .refreshable {
-                await loadRecommendations()
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await loadRecommendations() }
-                    } label: {
-                        Image(systemName: "arrow.trianglehead.2.clockwise")
-                    }
-                }
-            }
-            .task(id: perfumes.count) {
-                await loadRecommendations()
-            }
+        }
+        .task(id: perfumes.count) {
+            await loadRecommendations()
         }
     }
 

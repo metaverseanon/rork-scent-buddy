@@ -10,44 +10,42 @@ struct CompareView: View {
     @State private var showingRightPicker: Bool = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if perfumes.count < 2 {
-                    needMorePerfumes
-                } else if leftPerfume == nil || rightPerfume == nil {
-                    selectionPrompt
-                } else {
-                    comparisonContent
-                }
+        ScrollView {
+            if perfumes.count < 2 {
+                needMorePerfumes
+            } else if leftPerfume == nil || rightPerfume == nil {
+                selectionPrompt
+            } else {
+                comparisonContent
             }
-            .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("Compare")
-            .toolbar {
-                if leftPerfume != nil || rightPerfume != nil {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Reset") {
-                            withAnimation(.snappy) {
-                                leftPerfume = nil
-                                rightPerfume = nil
-                            }
+        }
+        .background(AppearanceManager.shared.theme.backgroundColor)
+        .navigationTitle("Compare")
+        .toolbar {
+            if leftPerfume != nil || rightPerfume != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Reset") {
+                        withAnimation(.snappy) {
+                            leftPerfume = nil
+                            rightPerfume = nil
                         }
                     }
                 }
             }
-            .sheet(isPresented: $showingLeftPicker) {
-                ComparePerfumePicker(
-                    perfumes: perfumes,
-                    excludedPerfume: rightPerfume,
-                    selection: $leftPerfume
-                )
-            }
-            .sheet(isPresented: $showingRightPicker) {
-                ComparePerfumePicker(
-                    perfumes: perfumes,
-                    excludedPerfume: leftPerfume,
-                    selection: $rightPerfume
-                )
-            }
+        }
+        .sheet(isPresented: $showingLeftPicker) {
+            ComparePerfumePicker(
+                perfumes: perfumes,
+                excludedPerfume: rightPerfume,
+                selection: $leftPerfume
+            )
+        }
+        .sheet(isPresented: $showingRightPicker) {
+            ComparePerfumePicker(
+                perfumes: perfumes,
+                excludedPerfume: leftPerfume,
+                selection: $rightPerfume
+            )
         }
     }
 
