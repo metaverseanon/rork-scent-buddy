@@ -2,9 +2,49 @@ import SwiftUI
 
 struct SettingsView: View {
     private var currentTheme: AppTheme { AppearanceManager.shared.theme }
+    @State private var showingSmartPicks: Bool = false
+    @State private var showingCompare: Bool = false
 
     var body: some View {
         Form {
+            Section("Features") {
+                Button {
+                    showingSmartPicks = true
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "sparkles")
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(.orange.gradient, in: .rect(cornerRadius: 8))
+                        Text("Smart Picks")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Button {
+                    showingCompare = true
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(.purple.gradient, in: .rect(cornerRadius: 8))
+                        Text("Compare")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
             Section("Theme") {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
@@ -62,5 +102,11 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .navigationDestination(isPresented: $showingSmartPicks) {
+            RecommendationsView()
+        }
+        .navigationDestination(isPresented: $showingCompare) {
+            CompareView()
+        }
     }
 }
