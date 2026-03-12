@@ -5,6 +5,8 @@ struct CollectionView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Perfume.dateAdded, order: .reverse) private var perfumes: [Perfume]
     @State private var viewModel = CollectionViewModel()
+    @State private var showingSmartPicks: Bool = false
+    @State private var showingCompare: Bool = false
     private let theme = AppearanceManager.shared.theme
 
     private let columns = [
@@ -29,6 +31,22 @@ struct CollectionView: View {
         .navigationTitle("My Collection")
         .searchable(text: $viewModel.searchText, prompt: "Search perfumes...")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu {
+                    Button {
+                        showingSmartPicks = true
+                    } label: {
+                        Label("Smart Picks", systemImage: "sparkles")
+                    }
+                    Button {
+                        showingCompare = true
+                    } label: {
+                        Label("Compare", systemImage: "arrow.left.arrow.right")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     ForEach(SortOption.allCases, id: \.self) { option in
@@ -55,6 +73,12 @@ struct CollectionView: View {
         }
         .navigationDestination(for: Perfume.self) { perfume in
             PerfumeDetailView(perfume: perfume)
+        }
+        .navigationDestination(isPresented: $showingSmartPicks) {
+            RecommendationsView()
+        }
+        .navigationDestination(isPresented: $showingCompare) {
+            CompareView()
         }
     }
 
