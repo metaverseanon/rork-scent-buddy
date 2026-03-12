@@ -138,8 +138,8 @@ struct NotePreferenceView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(selectedNotes.isEmpty ? Color(.tertiarySystemFill) : .tint)
-                .foregroundStyle(selectedNotes.isEmpty ? .primary : .white)
+                .background(selectedNotes.isEmpty ? Color(.tertiarySystemFill) : Color.accentColor)
+                .foregroundStyle(selectedNotes.isEmpty ? Color.primary : Color.white)
                 .clipShape(.rect(cornerRadius: 16))
         }
         .padding(.horizontal, 24)
