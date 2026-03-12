@@ -1,21 +1,18 @@
 import SwiftUI
-import SwiftData
 
 struct ProfileView: View {
     @State private var showingCreateAccount: Bool = false
     @State private var showingLogin: Bool = false
     @State private var showingEditProfile: Bool = false
-    @Query private var perfumes: [Perfume]
-    @Query private var wearEntries: [WearEntry]
-    @Query private var wishlist: [WishlistPerfume]
 
-    private var profileManager: UserProfileManager { UserProfileManager.shared }
-    private var authService: SupabaseAuthService { SupabaseAuthService.shared }
+    private var isLoggedIn: Bool {
+        !UserProfileManager.shared.profile.displayName.isEmpty
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                if profileManager.isLoggedIn {
+                if isLoggedIn {
                     loggedInContent
                 } else {
                     signedOutContent
@@ -24,7 +21,7 @@ struct ProfileView: View {
                 toolsSection
             }
         }
-        .background(AppearanceManager.shared.theme.backgroundColor)
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Profile")
         .sheet(isPresented: $showingCreateAccount) {
             CreateAccountView()
@@ -39,45 +36,35 @@ struct ProfileView: View {
 
     private var toolsSection: some View {
         VStack(spacing: 0) {
-            NavigationLink {
-                RecommendationsView()
-            } label: {
+            NavigationLink(destination: RecommendationsView()) {
                 ProfileMenuRow(icon: "sparkles", title: "For You", subtitle: "Personalized recommendations", color: .orange)
             }
 
             Divider().padding(.leading, 56)
 
-            NavigationLink {
-                PhotoScanView()
-            } label: {
+            NavigationLink(destination: PhotoScanView()) {
                 ProfileMenuRow(icon: "camera.viewfinder", title: "Scan Perfume", subtitle: "Identify bottles with your camera", color: .blue)
             }
 
             Divider().padding(.leading, 56)
 
-            NavigationLink {
-                CollectionStatsView()
-            } label: {
+            NavigationLink(destination: CollectionStatsView()) {
                 ProfileMenuRow(icon: "chart.bar.fill", title: "Stats", subtitle: "Collection analytics & insights", color: .purple)
             }
 
             Divider().padding(.leading, 56)
 
-            NavigationLink {
-                CompareView()
-            } label: {
+            NavigationLink(destination: CompareView()) {
                 ProfileMenuRow(icon: "arrow.left.arrow.right", title: "Compare", subtitle: "Side-by-side fragrance comparison", color: .teal)
             }
 
             Divider().padding(.leading, 56)
 
-            NavigationLink {
-                SettingsView()
-            } label: {
+            NavigationLink(destination: SettingsView()) {
                 ProfileMenuRow(icon: "gearshape.fill", title: "Settings", subtitle: "Theme & preferences", color: .gray)
             }
         }
-        .background(AppearanceManager.shared.theme.cardColor)
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 16))
         .padding(.horizontal)
         .padding(.bottom, 20)
@@ -139,7 +126,7 @@ struct ProfileView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(AppearanceManager.shared.theme.cardColor)
+                    .background(Color(.secondarySystemGroupedBackground))
                     .foregroundStyle(.tint)
                     .clipShape(.rect(cornerRadius: 14))
                     .overlay {
@@ -157,8 +144,6 @@ struct ProfileView: View {
     private var loggedInContent: some View {
         VStack(spacing: 20) {
             profileHeader
-            quickStats
-            activitySummary
             accountActions
         }
         .padding(.horizontal)
@@ -170,53 +155,28 @@ struct ProfileView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [AppearanceManager.shared.theme.tintColor.opacity(0.3), .purple.opacity(0.2)],
+                            colors: [.blue.opacity(0.3), .purple.opacity(0.2)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(width: 100, height: 100)
 
-                Text(profileManager.profile.avatarEmoji)
+                Text(UserProfileManager.shared.profile.avatarEmoji)
                     .font(.system(size: 48))
             }
 
             VStack(spacing: 4) {
-                Text(profileManager.profile.displayName)
+                Text(UserProfileManager.shared.profile.displayName)
                     .font(.title2.bold())
 
-                if !profileManager.profile.username.isEmpty {
-                    Text("@\(profileManager.profile.username)")
+                let username = UserProfileManager.shared.profile.username
+                if !username.isEmpty {
+                    Text("@\(username)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-
-                if !profileManager.profile.email.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "envelope.fill")
-                            .font(.caption2)
-                        Text(profileManager.profile.email)
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.tertiary)
-                }
-
-                if !profileManager.profile.bio.isEmpty {
-                    Text(profileManager.profile.bio)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 2)
-                }
             }
-
-            HStack(spacing: 6) {
-                Image(systemName: "calendar")
-                    .font(.caption)
-                Text("Member since \(profileManager.profile.memberSince, format: .dateTime.month(.wide).year())")
-                    .font(.caption)
-            }
-            .foregroundStyle(.tertiary)
 
             Button {
                 showingEditProfile = true
@@ -237,92 +197,11 @@ struct ProfileView: View {
         .padding(.vertical, 20)
     }
 
-    private var quickStats: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            ProfileStatTile(value: "\(perfumes.count)", label: "Collection", icon: "drop.fill", color: .purple)
-            ProfileStatTile(value: "\(wearEntries.count)", label: "Wears", icon: "calendar.badge.clock", color: .orange)
-            ProfileStatTile(value: "\(wishlist.count)", label: "Wishlist", icon: "heart.fill", color: .pink)
-        }
-    }
-
-    private var activitySummary: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Your Scent Identity")
-                .font(.headline)
-
-            if !profileManager.profile.favoriteNote.isEmpty {
-                HStack(spacing: 12) {
-                    Image(systemName: "leaf.fill")
-                        .font(.title3)
-                        .foregroundStyle(.green)
-                        .frame(width: 40, height: 40)
-                        .background(.green.opacity(0.12))
-                        .clipShape(.rect(cornerRadius: 10))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Signature Note")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(profileManager.profile.favoriteNote)
-                            .font(.subheadline.bold())
-                    }
-
-                    Spacer()
-                }
-            }
-
-            if let topBrand = mostWornBrand {
-                HStack(spacing: 12) {
-                    Image(systemName: "crown.fill")
-                        .font(.title3)
-                        .foregroundStyle(.orange)
-                        .frame(width: 40, height: 40)
-                        .background(.orange.opacity(0.12))
-                        .clipShape(.rect(cornerRadius: 10))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Most Worn Brand")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(topBrand)
-                            .font(.subheadline.bold())
-                    }
-
-                    Spacer()
-                }
-            }
-
-            if let avgRating = averageRating {
-                HStack(spacing: 12) {
-                    Image(systemName: "star.fill")
-                        .font(.title3)
-                        .foregroundStyle(.yellow)
-                        .frame(width: 40, height: 40)
-                        .background(.yellow.opacity(0.12))
-                        .clipShape(.rect(cornerRadius: 10))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Average Rating")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(String(format: "%.1f", avgRating))
-                            .font(.subheadline.bold())
-                    }
-
-                    Spacer()
-                }
-            }
-        }
-        .padding(16)
-        .background(AppearanceManager.shared.theme.cardColor)
-        .clipShape(.rect(cornerRadius: 16))
-    }
-
     private var accountActions: some View {
         VStack(spacing: 0) {
             Button(role: .destructive) {
                 Task {
-                    await authService.signOut()
+                    await SupabaseAuthService.shared.signOut()
                 }
             } label: {
                 HStack {
@@ -333,22 +212,8 @@ struct ProfileView: View {
                 .padding(16)
             }
         }
-        .background(AppearanceManager.shared.theme.cardColor)
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 14))
-    }
-
-    private var mostWornBrand: String? {
-        guard !wearEntries.isEmpty else { return nil }
-        let brands = wearEntries.map(\.perfumeBrand)
-        let counts = Dictionary(grouping: brands, by: { $0 }).mapValues(\.count)
-        return counts.max(by: { $0.value < $1.value })?.key
-    }
-
-    private var averageRating: Double? {
-        let rated = perfumes.filter { $0.rating > 0 }
-        guard !rated.isEmpty else { return nil }
-        let total = rated.reduce(0) { $0 + $1.rating }
-        return Double(total) / Double(rated.count)
     }
 }
 
@@ -384,29 +249,5 @@ struct ProfileMenuRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-}
-
-struct ProfileStatTile: View {
-    let value: String
-    let label: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(color)
-            Text(value)
-                .font(.title2.bold())
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(AppearanceManager.shared.theme.cardColor)
-        .clipShape(.rect(cornerRadius: 14))
     }
 }
