@@ -2,28 +2,20 @@ import SwiftUI
 
 struct CreateAccountView: View {
     @Environment(\.dismiss) private var dismiss
-    private var authService: SupabaseAuthService { SupabaseAuthService.shared }
 
     @State private var displayName: String = ""
     @State private var email: String = ""
-    @State private var password: String = ""
-    @State private var confirmPassword: String = ""
     @State private var username: String = ""
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
     @State private var selectedEmoji: String = "🧴"
-    @State private var showPassword: Bool = false
-    @State private var emailError: String = ""
-    @State private var passwordError: String = ""
-    private var usernameService: UsernameService { UsernameService.shared }
-    @State private var isCreating: Bool = false
 
     @FocusState private var focusedField: Field?
 
     private let emojiOptions = ["🧴", "💐", "🌸", "🌿", "🔥", "✨", "🖤", "💎", "🌙", "🍊", "🫧", "🪻"]
 
     nonisolated private enum Field: Hashable {
-        case displayName, email, password, confirmPassword, username, bio, favoriteNote
+        case displayName, email, username, bio, favoriteNote
     }
 
     var body: some View {
@@ -32,33 +24,21 @@ struct CreateAccountView: View {
                 VStack(spacing: 28) {
                     avatarSection
                     formSection
-
-                    if let error = authService.errorMessage {
-                        HStack(spacing: 6) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption)
-                            Text(error)
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 20)
             }
             .background(AppearanceManager.shared.theme.backgroundColor)
-            .navigationTitle("Create Account")
+            .navigationTitle("Create Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") { createAccount() }
+                    Button("Save") { createProfile() }
                         .fontWeight(.semibold)
-                        .disabled(!isFormValid || isCreating)
+                        .disabled(displayName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
@@ -141,79 +121,12 @@ struct CreateAccountView: View {
                         .autocorrectionDisabled()
                         .focused($focusedField, equals: .email)
                         .submitLabel(.next)
-                        .onSubmit { focusedField = .password }
-                }
-                .padding(12)
-                .background(AppearanceManager.shared.theme.cardColor)
-                .clipShape(.rect(cornerRadius: 12))
-
-                if !emailError.isEmpty {
-                    Text(emailError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .transition(.opacity)
-                }
-            }
-            .onChange(of: email) { _, _ in emailError = "" }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Password")
-                    .font(.subheadline.bold())
-                HStack(spacing: 10) {
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                    if showPassword {
-                        TextField("Min. 6 characters", text: $password)
-                            .textContentType(.newPassword)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.next)
-                            .onSubmit { focusedField = .confirmPassword }
-                    } else {
-                        SecureField("Min. 6 characters", text: $password)
-                            .textContentType(.newPassword)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.next)
-                            .onSubmit { focusedField = .confirmPassword }
-                    }
-                    Button {
-                        showPassword.toggle()
-                    } label: {
-                        Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                            .foregroundStyle(.tertiary)
-                            .font(.subheadline)
-                    }
-                }
-                .padding(12)
-                .background(AppearanceManager.shared.theme.cardColor)
-                .clipShape(.rect(cornerRadius: 12))
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Confirm Password")
-                    .font(.subheadline.bold())
-                HStack(spacing: 10) {
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
-                    SecureField("Re-enter password", text: $confirmPassword)
-                        .textContentType(.newPassword)
-                        .focused($focusedField, equals: .confirmPassword)
-                        .submitLabel(.next)
                         .onSubmit { focusedField = .username }
                 }
                 .padding(12)
                 .background(AppearanceManager.shared.theme.cardColor)
                 .clipShape(.rect(cornerRadius: 12))
-
-                if !passwordError.isEmpty {
-                    Text(passwordError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .transition(.opacity)
-                }
             }
-            .onChange(of: confirmPassword) { _, _ in passwordError = "" }
 
             Divider()
                 .padding(.vertical, 4)
@@ -231,42 +144,10 @@ struct CreateAccountView: View {
                         .focused($focusedField, equals: .username)
                         .submitLabel(.next)
                         .onSubmit { focusedField = .bio }
-                    Spacer()
-                    if usernameService.isChecking {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else if let available = usernameService.isAvailable {
-                        Image(systemName: available ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundStyle(available ? .green : .red)
-                            .transition(.scale.combined(with: .opacity))
-                    }
                 }
                 .padding(12)
                 .background(AppearanceManager.shared.theme.cardColor)
                 .clipShape(.rect(cornerRadius: 12))
-                .overlay {
-                    if let available = usernameService.isAvailable, !username.trimmingCharacters(in: .whitespaces).isEmpty {
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(available ? .green.opacity(0.5) : .red.opacity(0.5), lineWidth: 1.5)
-                    }
-                }
-
-                if let error = usernameService.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .transition(.opacity)
-                } else if usernameService.isAvailable == true {
-                    Text("Username is available!")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                        .transition(.opacity)
-                }
-            }
-            .onChange(of: username) { _, newValue in
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    usernameService.checkUsername(newValue)
-                }
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -314,70 +195,16 @@ struct CreateAccountView: View {
         }
     }
 
-    private var isFormValid: Bool {
-        let trimmedName = displayName.trimmingCharacters(in: .whitespaces)
-        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-        let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
-        let usernameOk = trimmedUsername.isEmpty || usernameService.isAvailable == true
-        return !trimmedName.isEmpty && !trimmedEmail.isEmpty && password.count >= 6 && password == confirmPassword && usernameOk
-    }
-
-    private func isValidEmail(_ email: String) -> Bool {
-        let pattern = #"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
-        return email.range(of: pattern, options: .regularExpression) != nil
-    }
-
-    private func createAccount() {
-        let trimmedEmail = email.trimmingCharacters(in: .whitespaces).lowercased()
-
-        guard isValidEmail(trimmedEmail) else {
-            withAnimation { emailError = "Please enter a valid email address" }
-            return
-        }
-
-        guard password.count >= 6 else {
-            withAnimation { passwordError = "Password must be at least 6 characters" }
-            return
-        }
-
-        guard password == confirmPassword else {
-            withAnimation { passwordError = "Passwords do not match" }
-            return
-        }
-
-        let trimmedUsername = username.trimmingCharacters(in: .whitespaces).lowercased()
-        isCreating = true
-        focusedField = nil
-
-        Task {
-            if !trimmedUsername.isEmpty {
-                _ = await usernameService.registerUsername(trimmedUsername)
-            }
-
-            let success = await authService.signUp(
-                email: trimmedEmail,
-                password: password,
-                displayName: displayName.trimmingCharacters(in: .whitespaces),
-                username: trimmedUsername,
-                bio: bio.trimmingCharacters(in: .whitespaces),
-                favoriteNote: favoriteNote.trimmingCharacters(in: .whitespaces),
-                avatarEmoji: selectedEmoji
-            )
-
-            if success {
-                UserProfileManager.shared.profile = UserProfile(
-                    displayName: displayName.trimmingCharacters(in: .whitespaces),
-                    username: trimmedUsername,
-                    email: trimmedEmail,
-                    bio: bio.trimmingCharacters(in: .whitespaces),
-                    favoriteNote: favoriteNote.trimmingCharacters(in: .whitespaces),
-                    memberSince: Date(),
-                    avatarEmoji: selectedEmoji
-                )
-                dismiss()
-            }
-
-            isCreating = false
-        }
+    private func createProfile() {
+        UserProfileManager.shared.profile = UserProfile(
+            displayName: displayName.trimmingCharacters(in: .whitespaces),
+            username: username.trimmingCharacters(in: .whitespaces).lowercased(),
+            email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+            bio: bio.trimmingCharacters(in: .whitespaces),
+            favoriteNote: favoriteNote.trimmingCharacters(in: .whitespaces),
+            memberSince: Date(),
+            avatarEmoji: selectedEmoji
+        )
+        dismiss()
     }
 }

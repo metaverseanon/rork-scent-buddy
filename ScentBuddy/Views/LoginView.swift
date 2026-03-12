@@ -2,16 +2,14 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
-    private var authService: SupabaseAuthService { SupabaseAuthService.shared }
 
+    @State private var displayName: String = ""
     @State private var email: String = ""
-    @State private var password: String = ""
-    @State private var showPassword: Bool = false
 
     @FocusState private var focusedField: Field?
 
     nonisolated private enum Field: Hashable {
-        case email, password
+        case displayName, email
     }
 
     var body: some View {
@@ -39,12 +37,25 @@ struct LoginView: View {
 
                         Text("Welcome Back")
                             .font(.title2.bold())
-                        Text("Sign in to your ScentBuddy account")
+                        Text("Enter your name to restore your profile")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
 
                     VStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Display Name")
+                                .font(.subheadline.bold())
+                            TextField("Your name", text: $displayName)
+                                .textContentType(.name)
+                                .focused($focusedField, equals: .displayName)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .email }
+                                .padding(12)
+                                .background(AppearanceManager.shared.theme.cardColor)
+                                .clipShape(.rect(cornerRadius: 12))
+                        }
+
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Email Address")
                                 .font(.subheadline.bold())
@@ -58,72 +69,21 @@ struct LoginView: View {
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
                                     .focused($focusedField, equals: .email)
-                                    .submitLabel(.next)
-                                    .onSubmit { focusedField = .password }
+                                    .submitLabel(.go)
+                                    .onSubmit { signIn() }
                             }
                             .padding(12)
                             .background(AppearanceManager.shared.theme.cardColor)
                             .clipShape(.rect(cornerRadius: 12))
-                        }
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Password")
-                                .font(.subheadline.bold())
-                            HStack(spacing: 10) {
-                                Image(systemName: "lock.fill")
-                                    .foregroundStyle(.secondary)
-                                    .font(.subheadline)
-                                if showPassword {
-                                    TextField("Enter password", text: $password)
-                                        .textContentType(.password)
-                                        .focused($focusedField, equals: .password)
-                                        .submitLabel(.go)
-                                        .onSubmit { signIn() }
-                                } else {
-                                    SecureField("Enter password", text: $password)
-                                        .textContentType(.password)
-                                        .focused($focusedField, equals: .password)
-                                        .submitLabel(.go)
-                                        .onSubmit { signIn() }
-                                }
-                                Button {
-                                    showPassword.toggle()
-                                } label: {
-                                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                                        .foregroundStyle(.tertiary)
-                                        .font(.subheadline)
-                                }
-                            }
-                            .padding(12)
-                            .background(AppearanceManager.shared.theme.cardColor)
-                            .clipShape(.rect(cornerRadius: 12))
-                        }
-
-                        if let error = authService.errorMessage {
-                            HStack(spacing: 6) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.caption)
-                                Text(error)
-                                    .font(.caption)
-                            }
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
 
                         Button {
                             signIn()
                         } label: {
                             HStack(spacing: 8) {
-                                if authService.isLoading {
-                                    ProgressView()
-                                        .tint(.white)
-                                        .controlSize(.small)
-                                } else {
-                                    Image(systemName: "arrow.right.circle.fill")
-                                    Text("Sign In")
-                                        .fontWeight(.semibold)
-                                }
+                                Image(systemName: "arrow.right.circle.fill")
+                                Text("Sign In")
+                                    .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -131,7 +91,7 @@ struct LoginView: View {
                             .foregroundStyle(.white)
                             .clipShape(.rect(cornerRadius: 14))
                         }
-                        .disabled(!isFormValid || authService.isLoading)
+                        .disabled(!isFormValid)
                         .opacity(isFormValid ? 1 : 0.6)
                     }
                     .padding(.horizontal)
@@ -151,21 +111,22 @@ struct LoginView: View {
     }
 
     private var isFormValid: Bool {
-        !email.trimmingCharacters(in: .whitespaces).isEmpty && password.count >= 6
+        !displayName.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private func signIn() {
         guard isFormValid else { return }
         focusedField = nil
 
-        Task {
-            let success = await authService.signIn(
-                email: email.trimmingCharacters(in: .whitespaces).lowercased(),
-                password: password
-            )
-            if success {
-                dismiss()
-            }
-        }
+        UserProfileManager.shared.profile = UserProfile(
+            displayName: displayName.trimmingCharacters(in: .whitespaces),
+            username: "",
+            email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+            bio: "",
+            favoriteNote: "",
+            memberSince: Date(),
+            avatarEmoji: "🧴"
+        )
+        dismiss()
     }
 }

@@ -30,12 +30,6 @@ struct ScentBuddyApp: App {
         }
     }()
 
-    init() {
-        if SupabaseManager.isConfigured {
-            SupabaseAuthService.shared.startListeningIfNeeded()
-        }
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView()

@@ -101,9 +101,7 @@ struct ProfileView: View {
             }
 
             Button(role: .destructive) {
-                Task {
-                    await SupabaseAuthService.shared.signOut()
-                }
+                UserProfileManager.shared.signOut()
             } label: {
                 HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
