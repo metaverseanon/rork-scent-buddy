@@ -13,19 +13,20 @@ class PhotoScanViewModel {
         recognizedTexts = []
         matchedPerfumes = []
 
-        let request = VNRecognizeTextRequest { [weak self] request, error in
-            guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let request = VNRecognizeTextRequest()
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            try? handler.perform([request])
+
+            let observations = request.results ?? []
             let texts = observations.compactMap { $0.topCandidates(1).first?.string }
-            Task { @MainActor in
+
+            await MainActor.run {
                 self?.handleRecognizedTexts(texts)
             }
-        }
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        DispatchQueue.global(qos: .userInitiated).async {
-            try? handler.perform([request])
         }
     }
 

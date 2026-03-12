@@ -45,7 +45,7 @@ class CollectionViewModel {
     }
 }
 
-enum SortOption: String, CaseIterable {
+nonisolated enum SortOption: String, CaseIterable, Sendable {
     case dateAdded = "Date Added"
     case name = "Name"
     case brand = "Brand"

@@ -303,8 +303,8 @@ struct LiveCameraView: UIViewControllerRepresentable {
 
 class LiveCameraViewController: UIViewController {
     var onImageCaptured: ((UIImage) -> Void)?
-    private let captureSession = AVCaptureSession()
-    private let photoOutput = AVCapturePhotoOutput()
+    nonisolated(unsafe) private let captureSession = AVCaptureSession()
+    nonisolated(unsafe) private let photoOutput = AVCapturePhotoOutput()
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private let sessionQueue = DispatchQueue(label: "cameraSessionQueue")
 
@@ -315,25 +315,27 @@ class LiveCameraViewController: UIViewController {
     }
 
     private func setupCamera() {
+        let session = captureSession
+        let output = photoOutput
         sessionQueue.async { [weak self] in
-            guard let self else { return }
-            captureSession.beginConfiguration()
-            captureSession.sessionPreset = .photo
+            session.beginConfiguration()
+            session.sessionPreset = .photo
 
             guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
                   let input = try? AVCaptureDeviceInput(device: camera),
-                  captureSession.canAddInput(input) else { return }
-            captureSession.addInput(input)
+                  session.canAddInput(input) else { return }
+            session.addInput(input)
 
-            if captureSession.canAddOutput(photoOutput) {
-                captureSession.addOutput(photoOutput)
+            if session.canAddOutput(output) {
+                session.addOutput(output)
             }
 
-            captureSession.commitConfiguration()
-            captureSession.startRunning()
+            session.commitConfiguration()
+            session.startRunning()
 
             DispatchQueue.main.async {
-                let layer = AVCaptureVideoPreviewLayer(session: self.captureSession)
+                guard let self else { return }
+                let layer = AVCaptureVideoPreviewLayer(session: session)
                 layer.videoGravity = .resizeAspectFill
                 layer.frame = self.view.bounds
                 self.view.layer.insertSublayer(layer, at: 0)
@@ -388,8 +390,9 @@ class LiveCameraViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        sessionQueue.async { [weak self] in
-            self?.captureSession.stopRunning()
+        let session = captureSession
+        sessionQueue.async {
+            session.stopRunning()
         }
     }
 }
@@ -399,7 +402,7 @@ extension LiveCameraViewController: AVCapturePhotoCaptureDelegate {
         guard let data = photo.fileDataRepresentation(),
               let image = UIImage(data: data) else { return }
         Task { @MainActor in
-            onImageCaptured?(image)
+            self.onImageCaptured?(image)
         }
     }
 }
