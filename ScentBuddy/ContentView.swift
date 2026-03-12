@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var appearanceManager = AppearanceManager.shared
+    private var theme: AppTheme { AppearanceManager.shared.theme }
 
     var body: some View {
         TabView {
@@ -35,7 +35,7 @@ struct ContentView: View {
                 }
             }
         }
-        .tint(appearanceManager.theme.tintColor)
-        .preferredColorScheme(appearanceManager.theme.colorScheme)
+        .tint(theme.tintColor)
+        .preferredColorScheme(theme.colorScheme)
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var authService = SupabaseAuthService.shared
+    private var authService: SupabaseAuthService { SupabaseAuthService.shared }
 
     @State private var email: String = ""
     @State private var password: String = ""

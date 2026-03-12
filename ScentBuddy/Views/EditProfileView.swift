@@ -2,7 +2,7 @@ import SwiftUI
 
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var profileManager = UserProfileManager.shared
+    private var profileManager: UserProfileManager { UserProfileManager.shared }
 
     @State private var displayName: String = ""
     @State private var email: String = ""

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CreateAccountView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var authService = SupabaseAuthService.shared
+    private var authService: SupabaseAuthService { SupabaseAuthService.shared }
 
     @State private var displayName: String = ""
     @State private var email: String = ""
@@ -15,7 +15,7 @@ struct CreateAccountView: View {
     @State private var showPassword: Bool = false
     @State private var emailError: String = ""
     @State private var passwordError: String = ""
-    @State private var usernameService = UsernameService.shared
+    private var usernameService: UsernameService { UsernameService.shared }
     @State private var isCreating: Bool = false
 
     @FocusState private var focusedField: Field?
