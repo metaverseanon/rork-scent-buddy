@@ -36,36 +36,7 @@ class PhotoScanViewModel {
             .filter { !$0.isEmpty && $0.count > 1 }
 
         recognizedTexts = Array(Set(filtered)).sorted()
-
-        let combined = filtered.joined(separator: " ").lowercased()
-
-        var matches: [PerfumeEntry] = []
-        for entry in PerfumeDatabase.entries {
-            let nameMatch = combined.contains(entry.name.lowercased())
-            let brandMatch = combined.contains(entry.brand.lowercased())
-
-            if nameMatch && brandMatch {
-                matches.append(entry)
-            } else if nameMatch {
-                let nameWords = entry.name.lowercased().split(separator: " ")
-                if nameWords.count >= 2 || brandMatch {
-                    matches.append(entry)
-                }
-            }
-        }
-
-        if matches.isEmpty {
-            for text in filtered {
-                let results = PerfumeDatabase.search(query: text)
-                for result in results.prefix(3) {
-                    if !matches.contains(where: { $0.id == result.id }) {
-                        matches.append(result)
-                    }
-                }
-            }
-        }
-
-        matchedPerfumes = Array(matches.prefix(8))
+        matchedPerfumes = []
         isProcessing = false
     }
 

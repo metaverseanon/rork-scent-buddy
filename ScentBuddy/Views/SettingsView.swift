@@ -2,41 +2,28 @@ import SwiftUI
 
 struct SettingsView: View {
     private var currentTheme: AppTheme { AppearanceManager.shared.theme }
-    @State private var showingSmartPicks: Bool = false
-    @State private var showingCompare: Bool = false
+    @State private var showingNotePreferences: Bool = false
 
     var body: some View {
         Form {
-            Section("Features") {
+            Section("Preferences") {
                 Button {
-                    showingSmartPicks = true
+                    showingNotePreferences = true
                 } label: {
                     HStack(spacing: 14) {
-                        Image(systemName: "sparkles")
+                        Image(systemName: "wand.and.stars")
                             .font(.body)
                             .foregroundStyle(.white)
                             .frame(width: 32, height: 32)
                             .background(.orange.gradient, in: .rect(cornerRadius: 8))
-                        Text("Smart Picks")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-
-                Button {
-                    showingCompare = true
-                } label: {
-                    HStack(spacing: 14) {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .font(.body)
-                            .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .background(.purple.gradient, in: .rect(cornerRadius: 8))
-                        Text("Compare")
-                            .foregroundStyle(.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Note Preferences")
+                                .foregroundStyle(.primary)
+                            let count = OnboardingManager.shared.notePreferences.favoriteNotes.count
+                            Text(count > 0 ? "\(count) notes selected" : "No preferences set")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -102,11 +89,8 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
-        .navigationDestination(isPresented: $showingSmartPicks) {
-            RecommendationsView()
-        }
-        .navigationDestination(isPresented: $showingCompare) {
-            CompareView()
+        .sheet(isPresented: $showingNotePreferences) {
+            NotePreferenceView()
         }
     }
 }

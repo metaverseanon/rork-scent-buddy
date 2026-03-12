@@ -34,7 +34,7 @@ struct AddWishlistView: View {
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundStyle(.primary)
-                                Text("150+ fragrances with auto-fill")
+                                Text("74k+ fragrances with auto-fill")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -51,7 +51,7 @@ struct AddWishlistView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
-                            Text("Auto-filled from database")
+                            Text("Auto-filled from Fragella")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Spacer()

@@ -38,11 +38,11 @@ struct AddPerfumeView: View {
                                 .frame(width: 32, height: 32)
                                 .background(.tint, in: .rect(cornerRadius: 8))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Search Perfume Database")
+                                Text("Search Fragella Database")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundStyle(.primary)
-                                Text("150+ fragrances with auto-fill")
+                                Text("74k+ fragrances with auto-fill")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -59,7 +59,7 @@ struct AddPerfumeView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
-                            Text("Auto-filled from database")
+                            Text("Auto-filled from Fragella")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Spacer()
@@ -233,15 +233,9 @@ struct NotePickerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var searchText: String = ""
 
-    private var allAvailableNotes: [String] {
-        let dbNotes = Set(PerfumeDatabase.entries.flatMap(\.allNotes))
-        let constantNotes = Set(PerfumeConstants.commonNotes)
-        return Array(dbNotes.union(constantNotes)).sorted()
-    }
-
     private var filteredNotes: [String] {
-        if searchText.isEmpty { return allAvailableNotes }
-        return allAvailableNotes.filter { $0.localizedStandardContains(searchText) }
+        if searchText.isEmpty { return PerfumeConstants.commonNotes }
+        return PerfumeConstants.commonNotes.filter { $0.localizedStandardContains(searchText) }
     }
 
     var body: some View {
