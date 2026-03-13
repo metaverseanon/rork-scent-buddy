@@ -79,12 +79,11 @@ final class SupabaseService {
 
     func signUp(email: String, password: String) async throws -> SupabaseUser {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.serverError("Supabase is not configured. URL empty: \(supabaseURL.isEmpty), Key empty: \(supabaseKey.isEmpty)")
+            throw SupabaseError.serverError("Service not configured. Please check your Supabase settings.")
         }
 
-        let urlString = "\(supabaseURL)/auth/v1/signup"
-        guard let url = URL(string: urlString) else {
-            throw SupabaseError.serverError("Invalid Supabase URL: \(urlString)")
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup") else {
+            throw SupabaseError.serverError("Service not configured. Please check your Supabase settings.")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -99,10 +98,8 @@ final class SupabaseService {
         let response: URLResponse
         do {
             (data, response) = try await URLSession.shared.data(for: request)
-        } catch let urlError as URLError {
-            throw SupabaseError.serverError("Connection failed (\(urlError.code.rawValue)): \(urlError.localizedDescription)")
         } catch {
-            throw SupabaseError.serverError("Request failed: \(error.localizedDescription)")
+            throw SupabaseError.serverError("Could not connect to server. Please check your internet connection.")
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -114,7 +111,7 @@ final class SupabaseService {
                 let message = errorResp.msg ?? errorResp.message ?? errorResp.error_description ?? errorResp.error ?? "Sign up failed"
                 throw SupabaseError.serverError(message)
             }
-            throw SupabaseError.serverError("Sign up failed (status \(httpResponse.statusCode))")
+            throw SupabaseError.serverError("Sign up failed. Please try again.")
         }
 
         let authResponse = try JSONDecoder().decode(SupabaseAuthResponse.self, from: data)
@@ -133,12 +130,11 @@ final class SupabaseService {
 
     func signIn(email: String, password: String) async throws -> SupabaseUser {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.serverError("Supabase is not configured. URL empty: \(supabaseURL.isEmpty), Key empty: \(supabaseKey.isEmpty)")
+            throw SupabaseError.serverError("Service not configured. Please check your Supabase settings.")
         }
 
-        let urlString = "\(supabaseURL)/auth/v1/token?grant_type=password"
-        guard let url = URL(string: urlString) else {
-            throw SupabaseError.serverError("Invalid Supabase URL: \(urlString)")
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else {
+            throw SupabaseError.serverError("Service not configured. Please check your Supabase settings.")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -153,10 +149,8 @@ final class SupabaseService {
         let response: URLResponse
         do {
             (data, response) = try await URLSession.shared.data(for: request)
-        } catch let urlError as URLError {
-            throw SupabaseError.serverError("Connection failed (\(urlError.code.rawValue)): \(urlError.localizedDescription)")
         } catch {
-            throw SupabaseError.serverError("Request failed: \(error.localizedDescription)")
+            throw SupabaseError.serverError("Could not connect to server. Please check your internet connection.")
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -168,7 +162,7 @@ final class SupabaseService {
                 let message = errorResp.msg ?? errorResp.message ?? errorResp.error_description ?? "Invalid email or password"
                 throw SupabaseError.serverError(message)
             }
-            throw SupabaseError.serverError("Sign in failed")
+            throw SupabaseError.serverError("Sign in failed. Please try again.")
         }
 
         let authResponse = try JSONDecoder().decode(SupabaseAuthResponse.self, from: data)
@@ -219,10 +213,8 @@ final class SupabaseService {
         let response: URLResponse
         do {
             (data, response) = try await URLSession.shared.data(for: request)
-        } catch let urlError as URLError {
-            throw SupabaseError.serverError("Profile save failed (\(urlError.code.rawValue)): \(urlError.localizedDescription)")
         } catch {
-            throw SupabaseError.serverError("Profile save failed: \(error.localizedDescription)")
+            throw SupabaseError.serverError("Could not save profile. Please check your connection.")
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
