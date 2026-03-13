@@ -15,6 +15,22 @@ struct WearDiaryView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                HStack {
+                    Button {
+                        showingLogWear = true
+                    } label: {
+                        Label("Log Wear", systemImage: "plus.circle.fill")
+                            .font(.subheadline.bold())
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(.tint)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                    }
+                    Spacer()
+                }
+                .padding(.top, 4)
+
                 if let scent = scentOfTheDay {
                     scentOfTheDayCard(scent)
                 }
@@ -29,15 +45,6 @@ struct WearDiaryView: View {
         }
         .background(AppearanceManager.shared.theme.backgroundColor)
         .navigationTitle("Wear Diary")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingLogWear = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                }
-            }
-        }
         .sheet(isPresented: $showingLogWear) {
             LogWearView()
         }

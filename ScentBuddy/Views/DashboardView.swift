@@ -31,6 +31,14 @@ struct DashboardView: View {
         }
         .background(theme.backgroundColor)
         .navigationTitle("ScentBuddy")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("ScentBuddy")
+                    .font(.headline)
+                    .fontWeight(.bold)
+            }
+        }
         .task {
             scentOfTheDay = scentService.suggest(from: perfumes, wearEntries: wearEntries)
         }
@@ -45,14 +53,9 @@ struct DashboardView: View {
                 if !UserProfileManager.shared.profile.displayName.isEmpty {
                     Text(UserProfileManager.shared.profile.displayName)
                         .font(.title2.bold())
-                } else {
-                    Text("Fragrance Explorer")
-                        .font(.title2.bold())
                 }
             }
             Spacer()
-            Text(UserProfileManager.shared.profile.avatarEmoji)
-                .font(.system(size: 36))
         }
         .padding(.top, 8)
     }

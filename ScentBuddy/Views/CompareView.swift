@@ -162,36 +162,46 @@ struct CompareView: View {
         .padding(.top, 8)
     }
 
+    @ViewBuilder
     private func ratingComparison(left: Perfume, right: Perfume) -> some View {
-        VStack(spacing: 12) {
-            Text("Rating")
-                .font(.subheadline.bold())
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        if left.rating > 0 || right.rating > 0 {
+            VStack(spacing: 12) {
+                Text("Rating")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack {
-                ratingStars(left.rating)
-                    .frame(maxWidth: .infinity)
-                Divider().frame(height: 20)
-                ratingStars(right.rating)
-                    .frame(maxWidth: .infinity)
+                HStack {
+                    ratingDisplay(left.rating)
+                        .frame(maxWidth: .infinity)
+                    Divider().frame(height: 20)
+                    ratingDisplay(right.rating)
+                        .frame(maxWidth: .infinity)
+                }
             }
+            .padding(16)
+            .background(AppearanceManager.shared.theme.cardColor)
+            .clipShape(.rect(cornerRadius: 14))
         }
-        .padding(16)
-        .background(AppearanceManager.shared.theme.cardColor)
-        .clipShape(.rect(cornerRadius: 14))
     }
 
-    private func ratingStars(_ rating: Int) -> some View {
-        HStack(spacing: 3) {
-            ForEach(0..<5, id: \.self) { i in
-                Image(systemName: i < rating ? "star.fill" : "star")
-                    .font(.caption)
-                    .foregroundStyle(i < rating ? .orange : .gray.opacity(0.3))
+    @ViewBuilder
+    private func ratingDisplay(_ rating: Int) -> some View {
+        if rating > 0 {
+            HStack(spacing: 3) {
+                ForEach(0..<5, id: \.self) { i in
+                    Image(systemName: i < rating ? "star.fill" : "star")
+                        .font(.caption)
+                        .foregroundStyle(i < rating ? .orange : .gray.opacity(0.3))
+                }
+                Text("\(rating)/5")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
             }
-            Text("\(rating)/5")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
+        } else {
+            Text("Not rated")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
     }
 

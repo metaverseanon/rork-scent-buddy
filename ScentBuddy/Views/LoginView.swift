@@ -63,7 +63,7 @@ struct LoginView: View {
                                 Image(systemName: "envelope.fill")
                                     .foregroundStyle(.secondary)
                                     .font(.subheadline)
-                                TextField("you@example.com", text: $email)
+                                TextField("Email address", text: $email)
                                     .textContentType(.emailAddress)
                                     .keyboardType(.emailAddress)
                                     .textInputAutocapitalization(.never)

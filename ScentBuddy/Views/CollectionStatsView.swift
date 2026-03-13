@@ -190,51 +190,54 @@ struct CollectionStatsView: View {
         .clipShape(.rect(cornerRadius: 16))
     }
 
+    @ViewBuilder
     private var topRated: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Image(systemName: "trophy.fill")
-                    .foregroundStyle(.yellow)
-                Text("Top Rated")
-                    .font(.headline)
-            }
+        let rated = perfumes.filter { $0.rating > 0 }.sorted { $0.rating > $1.rating }
+        if !rated.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Image(systemName: "trophy.fill")
+                        .foregroundStyle(.yellow)
+                    Text("Top Rated")
+                        .font(.headline)
+                }
 
-            let top = perfumes.filter { $0.rating > 0 }.sorted { $0.rating > $1.rating }.prefix(5)
-            ForEach(Array(top)) { perfume in
-                HStack(spacing: 12) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(ratingGradient(perfume.rating))
-                        .frame(width: 36, height: 36)
-                        .overlay {
-                            Text("\(perfume.rating)")
+                ForEach(Array(rated.prefix(5))) { perfume in
+                    HStack(spacing: 12) {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(ratingGradient(perfume.rating))
+                            .frame(width: 36, height: 36)
+                            .overlay {
+                                Text("\(perfume.rating)")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                            }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(perfume.name)
                                 .font(.subheadline.bold())
-                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            Text(perfume.brand)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(perfume.name)
-                            .font(.subheadline.bold())
-                            .lineLimit(1)
-                        Text(perfume.brand)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                        Spacer()
 
-                    Spacer()
-
-                    HStack(spacing: 2) {
-                        ForEach(1...5, id: \.self) { star in
-                            Image(systemName: star <= perfume.rating ? "star.fill" : "star")
-                                .font(.system(size: 10))
-                                .foregroundStyle(star <= perfume.rating ? .orange : .gray.opacity(0.3))
+                        HStack(spacing: 2) {
+                            ForEach(1...5, id: \.self) { star in
+                                Image(systemName: star <= perfume.rating ? "star.fill" : "star")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(star <= perfume.rating ? .orange : .gray.opacity(0.3))
+                            }
                         }
                     }
                 }
             }
+            .padding(16)
+            .background(AppearanceManager.shared.theme.cardColor)
+            .clipShape(.rect(cornerRadius: 16))
         }
-        .padding(16)
-        .background(AppearanceManager.shared.theme.cardColor)
-        .clipShape(.rect(cornerRadius: 16))
     }
 
     private var wearInsights: some View {
@@ -297,7 +300,7 @@ struct CollectionStatsView: View {
         let rated = perfumes.filter { $0.rating > 0 }
         guard !rated.isEmpty else { return "—" }
         let avg = Double(rated.reduce(0) { $0 + $1.rating }) / Double(rated.count)
-        return String(format: "%.1f", avg)
+        return String(format: "%.1f/5", avg)
     }
 
     private struct NoteCount {

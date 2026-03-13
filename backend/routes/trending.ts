@@ -944,28 +944,46 @@ function getSeasonalPool(season: string): TrendingPerfumeData[] {
 const trendingRouter = new Hono();
 
 trendingRouter.get("/", async (c) => {
-  const now = Date.now();
-  const forceRefresh = c.req.query("refresh") === "true";
+  try {
+    const now = Date.now();
+    const forceRefresh = c.req.query("refresh") === "true";
 
-  if (!forceRefresh && cachedTrending && now - lastFetchTime < CACHE_DURATION_MS) {
+    if (!forceRefresh && cachedTrending && now - lastFetchTime < CACHE_DURATION_MS) {
+      return c.json({
+        trending: cachedTrending,
+        lastUpdated: new Date(lastFetchTime).toISOString(),
+        nextUpdateAt: new Date(lastFetchTime + CACHE_DURATION_MS).toISOString(),
+        source: "cache",
+      });
+    }
+
+    const trending = await generateTrendingList();
+    cachedTrending = trending;
+    lastFetchTime = now;
+
     return c.json({
-      trending: cachedTrending,
+      trending,
       lastUpdated: new Date(lastFetchTime).toISOString(),
       nextUpdateAt: new Date(lastFetchTime + CACHE_DURATION_MS).toISOString(),
-      source: "cache",
+      source: "fresh",
+    });
+  } catch (error) {
+    console.error("Trending API error:", error);
+    if (cachedTrending && cachedTrending.length > 0) {
+      return c.json({
+        trending: cachedTrending,
+        lastUpdated: new Date(lastFetchTime).toISOString(),
+        nextUpdateAt: new Date(lastFetchTime + CACHE_DURATION_MS).toISOString(),
+        source: "cache_fallback",
+      });
+    }
+    return c.json({
+      trending: [],
+      lastUpdated: new Date().toISOString(),
+      nextUpdateAt: new Date(Date.now() + CACHE_DURATION_MS).toISOString(),
+      source: "error",
     });
   }
-
-  const trending = await generateTrendingList();
-  cachedTrending = trending;
-  lastFetchTime = now;
-
-  return c.json({
-    trending,
-    lastUpdated: new Date(lastFetchTime).toISOString(),
-    nextUpdateAt: new Date(lastFetchTime + CACHE_DURATION_MS).toISOString(),
-    source: "fresh",
-  });
 });
 
 trendingRouter.get("/category/:category", async (c) => {

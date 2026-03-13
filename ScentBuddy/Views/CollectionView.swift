@@ -18,6 +18,7 @@ struct CollectionView: View {
                 emptyState
             } else {
                 VStack(spacing: 20) {
+                    actionBar
                     statsBar
                     filterBar
                     perfumeGrid
@@ -28,34 +29,49 @@ struct CollectionView: View {
         .background(AppearanceManager.shared.theme.backgroundColor)
         .navigationTitle("My Collection")
         .searchable(text: $viewModel.searchText, prompt: "Search perfumes...")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    ForEach(SortOption.allCases, id: \.self) { option in
-                        Button {
-                            withAnimation { viewModel.selectedSortOption = option }
-                        } label: {
-                            Label(option.rawValue, systemImage: option.icon)
-                        }
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down.circle")
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    viewModel.showingAddPerfume = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                }
-            }
-        }
         .sheet(isPresented: $viewModel.showingAddPerfume) {
             AddPerfumeView()
         }
         .navigationDestination(for: Perfume.self) { perfume in
             PerfumeDetailView(perfume: perfume)
         }
+    }
+
+    private var actionBar: some View {
+        HStack(spacing: 12) {
+            Button {
+                viewModel.showingAddPerfume = true
+            } label: {
+                Label("Add Perfume", systemImage: "plus.circle.fill")
+                    .font(.subheadline.bold())
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.tint)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+            }
+
+            Menu {
+                ForEach(SortOption.allCases, id: \.self) { option in
+                    Button {
+                        withAnimation { viewModel.selectedSortOption = option }
+                    } label: {
+                        Label(option.rawValue, systemImage: option.icon)
+                    }
+                }
+            } label: {
+                Label("Sort", systemImage: "arrow.up.arrow.down")
+                    .font(.subheadline.bold())
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(AppearanceManager.shared.theme.chipColor)
+                    .foregroundStyle(.primary)
+                    .clipShape(Capsule())
+            }
+
+            Spacer()
+        }
+        .padding(.top, 8)
     }
 
     private var statsBar: some View {

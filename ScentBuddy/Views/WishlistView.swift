@@ -11,6 +11,25 @@ struct WishlistView: View {
             if wishlist.isEmpty {
                 emptyState
             } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Button {
+                            showingAddSheet = true
+                        } label: {
+                            Label("Add to Wishlist", systemImage: "plus.circle.fill")
+                                .font(.subheadline.bold())
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(.tint)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                        }
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+
                 LazyVStack(spacing: 12) {
                     ForEach(wishlist) { item in
                         WishlistCard(item: item, onDelete: { deleteItem(item) })
@@ -23,15 +42,6 @@ struct WishlistView: View {
         }
         .background(AppearanceManager.shared.theme.backgroundColor)
         .navigationTitle("Wishlist")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingAddSheet = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                }
-            }
-        }
         .sheet(isPresented: $showingAddSheet) {
             AddWishlistView()
         }

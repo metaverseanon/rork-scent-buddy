@@ -9,18 +9,18 @@ final class TrendingAPIService {
     private(set) var dataSource: String?
 
     private static let apiBaseURL: String? = {
-        if let url = Bundle.main.infoDictionary?["RORK_API_BASE_URL"] as? String, !url.isEmpty {
-            return url
-        }
         let configURL = Config.EXPO_PUBLIC_RORK_API_BASE_URL
         if !configURL.isEmpty {
             return configURL
         }
+        if let url = Bundle.main.infoDictionary?["RORK_API_BASE_URL"] as? String, !url.isEmpty {
+            return url
+        }
         return nil
     }()
 
-    private let cacheKey = "cached_trending_perfumes_v2"
-    private let cacheTimestampKey = "cached_trending_timestamp_v2"
+    private let cacheKey = "cached_trending_perfumes_v3"
+    private let cacheTimestampKey = "cached_trending_timestamp_v3"
     private let cacheDuration: TimeInterval = 4 * 60 * 60
 
     init() {
@@ -57,17 +57,29 @@ final class TrendingAPIService {
     }
 
     private func fetchFromAPI(forceRefresh: Bool) async throws -> [TrendingPerfume] {
-        guard let baseURL = Self.apiBaseURL, let url = URL(string: "\(baseURL)/api/trending\(forceRefresh ? "?refresh=true" : "")") else {
+        guard let baseURL = Self.apiBaseURL else {
+            throw URLError(.badURL)
+        }
+
+        let cleanBase = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        let urlString = "\(cleanBase)/api/trending\(forceRefresh ? "?refresh=true" : "")"
+
+        guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
         }
 
         var request = URLRequest(url: url)
-        request.timeoutInterval = 15
+        request.timeoutInterval = 30
         request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        guard httpResponse.statusCode == 200 else {
             throw URLError(.badServerResponse)
         }
 

@@ -5,12 +5,12 @@ struct RecommendationService {
         let notePrefs = OnboardingManager.shared.notePreferences.favoriteNotes
 
         if perfumes.isEmpty && notePrefs.isEmpty {
-            return defaultRecommendations
+            return rotateResults(defaultRecommendations)
         }
 
         let noteProfile = buildNoteProfile(from: perfumes, wearEntries: wearEntries, preferredNotes: notePrefs)
 
-        guard !noteProfile.isEmpty else { return defaultRecommendations }
+        guard !noteProfile.isEmpty else { return rotateResults(defaultRecommendations) }
 
         let topNoteNames = noteProfile
             .sorted { $0.value > $1.value }
@@ -34,7 +34,22 @@ struct RecommendationService {
             }
         }
 
-        return Array(recommendations.prefix(10))
+        return rotateResults(Array(recommendations.prefix(10)))
+    }
+
+    private func rotateResults(_ recs: [RecommendedPerfume]) -> [RecommendedPerfume] {
+        guard recs.count > 1 else { return recs }
+        let hourBlock = Calendar.current.component(.hour, from: Date()) / 3
+        let daySeed = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let seed = daySeed * 7 + hourBlock
+        var shuffled = recs
+        var s = seed
+        for i in stride(from: shuffled.count - 1, through: 1, by: -1) {
+            s = (s &* 16807 &+ 0) % 2147483647
+            let j = abs(s) % (i + 1)
+            shuffled.swapAt(i, j)
+        }
+        return shuffled
     }
 
     private func buildNoteProfile(from perfumes: [Perfume], wearEntries: [WearEntry], preferredNotes: [String]) -> [String: Double] {
@@ -101,26 +116,36 @@ struct RecommendationService {
                 ("Santal 33", "Le Labo", "Eau de Parfum", ["Sandalwood", "Cedar", "Cardamom", "Iris", "Violet", "Leather"]),
                 ("Tam Dao", "Diptyque", "Eau de Parfum", ["Sandalwood", "Cedar", "Musk", "Rosewood", "Cypress"]),
                 ("Ombré Leather", "Tom Ford", "Eau de Parfum", ["Leather", "Patchouli", "Vetiver", "Jasmine", "Cardamom"]),
+                ("Wonderwood", "Comme des Garçons", "Eau de Parfum", ["Cedar", "Sandalwood", "Vetiver", "Pepper", "Oud"]),
+                ("Woody Mood", "Maison Tahité", "Eau de Parfum", ["Sandalwood", "Patchouli", "Vanilla", "Amber", "Musk"]),
             ],
             "floral": [
                 ("Portrait of a Lady", "Frederic Malle", "Eau de Parfum", ["Rose", "Patchouli", "Sandalwood", "Musk", "Frankincense"]),
                 ("Delina", "Parfums de Marly", "Eau de Parfum", ["Rose", "Peony", "Lychee", "Vanilla", "Musk"]),
                 ("Rose 31", "Le Labo", "Eau de Parfum", ["Rose", "Cedar", "Cumin", "Amber", "Musk"]),
+                ("Miss Dior Blooming Bouquet", "Dior", "Eau de Toilette", ["Peony", "Rose", "White Musk", "Apricot"]),
+                ("Gucci Bloom", "Gucci", "Eau de Parfum", ["Tuberose", "Jasmine", "Rangoon Creeper"]),
             ],
             "fresh": [
                 ("Acqua di Gio Profumo", "Giorgio Armani", "Eau de Parfum", ["Bergamot", "Aquatic", "Amber", "Patchouli", "Incense"]),
                 ("Light Blue", "Dolce & Gabbana", "Eau de Toilette", ["Lemon", "Apple", "Cedar", "Musk", "Bamboo"]),
                 ("Neroli Portofino", "Tom Ford", "Eau de Parfum", ["Neroli", "Bergamot", "Lemon", "Amber", "Musk"]),
+                ("CK One", "Calvin Klein", "Eau de Toilette", ["Bergamot", "Lemon", "Green Tea", "Rose", "Musk"]),
+                ("Green Irish Tweed", "Creed", "Eau de Parfum", ["Lemon", "Verbena", "Iris", "Violet Leaf", "Sandalwood"]),
             ],
             "oriental": [
                 ("Baccarat Rouge 540", "Maison Francis Kurkdjian", "Eau de Parfum", ["Saffron", "Jasmine", "Amber", "Cedar", "Musk"]),
                 ("By the Fireplace", "Maison Margiela", "Eau de Toilette", ["Vanilla", "Cashmeran", "Chestnut", "Guaiac Wood"]),
                 ("Tobacco Vanille", "Tom Ford", "Eau de Parfum", ["Tobacco", "Vanilla", "Tonka Bean", "Cacao", "Ginger"]),
+                ("Spicebomb Extreme", "Viktor & Rolf", "Eau de Parfum", ["Tobacco", "Vanilla", "Lavender", "Cinnamon"]),
+                ("Jazz Club", "Maison Margiela", "Eau de Toilette", ["Rum", "Tobacco", "Vanilla", "Vetiver", "Tonka Bean"]),
             ],
             "fruity": [
                 ("Aventus", "Creed", "Eau de Parfum", ["Apple", "Bergamot", "Patchouli", "Musk", "Vanilla"]),
                 ("Lost Cherry", "Tom Ford", "Eau de Parfum", ["Cherry", "Almond", "Vanilla", "Tonka Bean", "Cedar"]),
                 ("Scandal", "Jean Paul Gaultier", "Eau de Parfum", ["Honey", "Orange Blossom", "Caramel", "Patchouli"]),
+                ("Black Opium", "Yves Saint Laurent", "Eau de Parfum", ["Coffee", "Vanilla", "Orange Blossom", "Pear"]),
+                ("Cloud", "Ariana Grande", "Eau de Parfum", ["Lavender", "Pear", "Coconut", "Praline", "Musk"]),
             ],
         ]
 

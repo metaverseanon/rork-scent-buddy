@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct CreateAccountView: View {
     @Environment(\.dismiss) private var dismiss
@@ -9,6 +10,11 @@ struct CreateAccountView: View {
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
     @State private var selectedEmoji: String = "🧴"
+    @State private var avatarMode: AvatarMode = .emoji
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var avatarImageData: Data?
+    @State private var showingImageSourcePicker: Bool = false
+    @State private var usernameService = UsernameService.shared
 
     @FocusState private var focusedField: Field?
 
@@ -16,6 +22,10 @@ struct CreateAccountView: View {
 
     nonisolated private enum Field: Hashable {
         case displayName, email, username, bio, favoriteNote
+    }
+
+    nonisolated private enum AvatarMode {
+        case emoji, photo
     }
 
     var body: some View {
@@ -38,10 +48,16 @@ struct CreateAccountView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { createProfile() }
                         .fontWeight(.semibold)
-                        .disabled(displayName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(!canSave)
                 }
             }
         }
+    }
+
+    private var canSave: Bool {
+        let nameValid = !displayName.trimmingCharacters(in: .whitespaces).isEmpty
+        let usernameValid = username.trimmingCharacters(in: .whitespaces).count < 3 || usernameService.isAvailable == true
+        return nameValid && usernameValid
     }
 
     private var avatarSection: some View {
@@ -57,39 +73,95 @@ struct CreateAccountView: View {
                     )
                     .frame(width: 100, height: 100)
 
-                Text(selectedEmoji)
-                    .font(.system(size: 48))
+                if avatarMode == .photo, let data = avatarImageData, let uiImage = UIImage(data: data) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else {
+                    Text(selectedEmoji)
+                        .font(.system(size: 48))
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                Button {
+                    showingImageSourcePicker = true
+                } label: {
+                    Image(systemName: "camera.fill")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                        .padding(6)
+                        .background(.tint)
+                        .clipShape(Circle())
+                }
             }
 
             Text("Choose Your Avatar")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 10) {
-                ForEach(emojiOptions, id: \.self) { emoji in
-                    Button {
-                        withAnimation(.snappy) { selectedEmoji = emoji }
-                    } label: {
-                        Text(emoji)
-                            .font(.title2)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                selectedEmoji == emoji
-                                    ? AnyShapeStyle(.tint.opacity(0.15))
-                                    : AnyShapeStyle(AppearanceManager.shared.theme.chipColor)
-                            )
-                            .clipShape(.rect(cornerRadius: 12))
-                            .overlay {
-                                if selectedEmoji == emoji {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .strokeBorder(.tint, lineWidth: 2)
-                                }
-                            }
-                    }
+            HStack(spacing: 12) {
+                Button {
+                    withAnimation(.snappy) { avatarMode = .emoji }
+                } label: {
+                    Text("Emoji")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(avatarMode == .emoji ? AnyShapeStyle(.tint) : AnyShapeStyle(AppearanceManager.shared.theme.chipColor))
+                        .foregroundStyle(avatarMode == .emoji ? .white : .primary)
+                        .clipShape(Capsule())
+                }
+
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Text("Choose Photo")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(avatarMode == .photo ? AnyShapeStyle(.tint) : AnyShapeStyle(AppearanceManager.shared.theme.chipColor))
+                        .foregroundStyle(avatarMode == .photo ? .white : .primary)
+                        .clipShape(Capsule())
                 }
             }
-            .padding(.horizontal, 20)
+
+            if avatarMode == .emoji {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 10) {
+                    ForEach(emojiOptions, id: \.self) { emoji in
+                        Button {
+                            withAnimation(.snappy) { selectedEmoji = emoji }
+                        } label: {
+                            Text(emoji)
+                                .font(.title2)
+                                .frame(width: 44, height: 44)
+                                .background(
+                                    selectedEmoji == emoji
+                                        ? AnyShapeStyle(.tint.opacity(0.15))
+                                        : AnyShapeStyle(AppearanceManager.shared.theme.chipColor)
+                                )
+                                .clipShape(.rect(cornerRadius: 12))
+                                .overlay {
+                                    if selectedEmoji == emoji {
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(.tint, lineWidth: 2)
+                                    }
+                                }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
         }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    avatarImageData = data
+                    avatarMode = .photo
+                }
+            }
+        }
+        .photosPicker(isPresented: $showingImageSourcePicker, selection: $selectedPhotoItem, matching: .images)
     }
 
     private var formSection: some View {
@@ -114,7 +186,7 @@ struct CreateAccountView: View {
                     Image(systemName: "envelope.fill")
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
-                    TextField("you@example.com", text: $email)
+                    TextField("Email address", text: $email)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
@@ -148,6 +220,34 @@ struct CreateAccountView: View {
                 .padding(12)
                 .background(AppearanceManager.shared.theme.cardColor)
                 .clipShape(.rect(cornerRadius: 12))
+
+                HStack(spacing: 6) {
+                    if usernameService.isChecking {
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text("Checking availability...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if let available = usernameService.isAvailable {
+                        Image(systemName: available ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundStyle(available ? .green : .red)
+                            .font(.caption)
+                        Text(available ? "Username available" : (usernameService.errorMessage ?? "Username taken"))
+                            .font(.caption)
+                            .foregroundStyle(available ? .green : .red)
+                    } else if let error = usernameService.errorMessage {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .padding(.leading, 4)
+            }
+            .onChange(of: username) { _, newValue in
+                usernameService.checkUsername(newValue)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -196,9 +296,20 @@ struct CreateAccountView: View {
     }
 
     private func createProfile() {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespaces).lowercased()
+        if trimmedUsername.count >= 3 {
+            Task {
+                _ = await usernameService.registerUsername(trimmedUsername)
+            }
+        }
+
+        if let data = avatarImageData {
+            UserDefaults.standard.set(data, forKey: "user_avatar_image")
+        }
+
         UserProfileManager.shared.profile = UserProfile(
             displayName: displayName.trimmingCharacters(in: .whitespaces),
-            username: username.trimmingCharacters(in: .whitespaces).lowercased(),
+            username: trimmedUsername,
             email: email.trimmingCharacters(in: .whitespaces).lowercased(),
             bio: bio.trimmingCharacters(in: .whitespaces),
             favoriteNote: favoriteNote.trimmingCharacters(in: .whitespaces),
