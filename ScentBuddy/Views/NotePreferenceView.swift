@@ -38,7 +38,7 @@ struct NotePreferenceView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 100)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(AppearanceManager.shared.theme.backgroundColor)
             .safeAreaInset(edge: .bottom) {
                 continueButton
             }

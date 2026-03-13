@@ -8,9 +8,13 @@ final class TrendingAPIService {
     private(set) var errorMessage: String?
     private(set) var dataSource: String?
 
-    private let cacheKey = "cached_trending_perfumes_v4"
-    private let cacheTimestampKey = "cached_trending_timestamp_v4"
+    private let cacheKey = "cached_trending_perfumes_v5"
+    private let cacheTimestampKey = "cached_trending_timestamp_v5"
     private let cacheDuration: TimeInterval = 4 * 60 * 60
+
+    private var baseURL: String {
+        Config.EXPO_PUBLIC_RORK_API_BASE_URL
+    }
 
     init() {
         loadFromCache()
@@ -30,11 +34,48 @@ final class TrendingAPIService {
         errorMessage = nil
         defer { isLoading = false }
 
+        if !baseURL.isEmpty {
+            do {
+                let perfumes = try await fetchFromBackend(forceRefresh: forceRefresh)
+                trendingPerfumes = perfumes
+                lastUpdated = Date()
+                dataSource = "api"
+                saveToCache(perfumes)
+                return
+            } catch {
+                print("[TrendingAPI] Backend fetch failed: \(error.localizedDescription), falling back to local data")
+            }
+        }
+
         let perfumes = TrendingDataProvider.generateTrendingList()
         trendingPerfumes = perfumes
         lastUpdated = Date()
-        dataSource = "live"
+        dataSource = "local"
         saveToCache(perfumes)
+    }
+
+    private func fetchFromBackend(forceRefresh: Bool) async throws -> [TrendingPerfume] {
+        var urlString = "\(baseURL)/trending"
+        if forceRefresh {
+            urlString += "?refresh=true"
+        }
+
+        guard let url = URL(string: urlString) else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw URLError(.badServerResponse, userInfo: [NSLocalizedDescriptionKey: "Server returned \(statusCode)"])
+        }
+
+        let trendingResponse = try JSONDecoder().decode(TrendingResponse.self, from: data)
+        return trendingResponse.trending
     }
 
     private func saveToCache(_ perfumes: [TrendingPerfume]) {
