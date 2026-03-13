@@ -16,7 +16,7 @@ nonisolated struct UserProfile: Codable, Sendable {
         bio: String = "",
         favoriteNote: String = "",
         memberSince: Date = Date(),
-        avatarEmoji: String = "\u{1F9F4}"
+        avatarEmoji: String = "🌸"
     ) {
         self.displayName = displayName
         self.username = username

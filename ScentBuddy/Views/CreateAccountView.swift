@@ -11,7 +11,7 @@ struct CreateAccountView: View {
     @State private var username: String = ""
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
-    @State private var selectedEmoji: String = "\u{1F9F4}"
+    @State private var selectedEmoji: String = "🌸"
     @State private var avatarMode: AvatarMode = .emoji
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var avatarImageData: Data?
@@ -21,7 +21,7 @@ struct CreateAccountView: View {
 
     @FocusState private var focusedField: Field?
 
-    private let emojiOptions = ["\u{1F9F4}", "\u{1F490}", "\u{1F338}", "\u{1F33F}", "\u{1F525}", "\u{2728}", "\u{1F5A4}", "\u{1F48E}", "\u{1F319}", "\u{1F34A}", "\u{1FAE7}", "\u{1FAB7}"]
+    private let emojiOptions = ["🌸", "🔥", "💎", "🌙", "🍊", "🖤", "💜", "🌹", "⭐", "🌊", "🍃", "☁️"]
 
     nonisolated private enum Field: Hashable {
         case displayName, email, password, confirmPassword, username, bio, favoriteNote

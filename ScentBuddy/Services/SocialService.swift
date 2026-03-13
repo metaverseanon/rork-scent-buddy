@@ -14,7 +14,7 @@ nonisolated struct SocialProfile: Codable, Sendable, Identifiable {
         self.id = supabaseProfile.id
         self.username = supabaseProfile.username ?? "user"
         self.displayName = supabaseProfile.display_name ?? "User"
-        self.avatarEmoji = supabaseProfile.avatar_emoji ?? "\u{1F9F4}"
+        self.avatarEmoji = supabaseProfile.avatar_emoji ?? "🌸"
         self.collectionCount = 0
         self.favoriteNote = supabaseProfile.favorite_note ?? ""
         self.bio = supabaseProfile.bio ?? ""
