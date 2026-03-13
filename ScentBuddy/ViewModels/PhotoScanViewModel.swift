@@ -13,7 +13,7 @@ class PhotoScanViewModel {
         recognizedTexts = []
         matchedPerfumes = []
 
-        Task.detached(priority: .userInitiated) { [weak self] in
+        Task.detached(priority: .userInitiated) {
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
@@ -24,7 +24,7 @@ class PhotoScanViewModel {
             let observations = request.results ?? []
             let texts = observations.compactMap { $0.topCandidates(1).first?.string }
 
-            await MainActor.run {
+            await MainActor.run { [weak self] in
                 self?.handleRecognizedTexts(texts)
             }
         }

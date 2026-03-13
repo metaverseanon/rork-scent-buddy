@@ -16,80 +16,9 @@ struct EditProfileView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.purple.opacity(0.25), .pink.opacity(0.15)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 80, height: 80)
-
-                                Image(systemName: selectedEmoji)
-                                    .font(.system(size: 28))
-                                    .foregroundStyle(.white)
-                            }
-
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(iconOptions, id: \.self) { icon in
-                                        Button {
-                                            withAnimation(.snappy) { selectedEmoji = icon }
-                                        } label: {
-                                            Image(systemName: icon)
-                                                .font(.callout)
-                                                .foregroundStyle(selectedEmoji == icon ? .tint : .secondary)
-                                                .frame(width: 36, height: 36)
-                                                .background(
-                                                    selectedEmoji == icon
-                                                        ? AnyShapeStyle(.tint.opacity(0.15))
-                                                        : AnyShapeStyle(Color.clear)
-                                                )
-                                                .clipShape(.rect(cornerRadius: 10))
-                                        }
-                                    }
-                                }
-                            }
-                            .contentMargins(.horizontal, 0)
-                        }
-                        Spacer()
-                    }
-                }
-                .listRowBackground(Color.clear)
-
-                Section("Info") {
-                    TextField("Display Name", text: $displayName)
-                        .textContentType(.name)
-                    HStack(spacing: 8) {
-                        Image(systemName: "envelope.fill")
-                            .foregroundStyle(.secondary)
-                            .font(.subheadline)
-                        TextField("Email", text: $email)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
-                    HStack(spacing: 0) {
-                        Text("@")
-                            .foregroundStyle(.secondary)
-                        TextField("username", text: $username)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
-                    TextField("Bio", text: $bio, axis: .vertical)
-                        .lineLimit(2...4)
-                }
-
-                Section("Preferences") {
-                    TextField("Favorite Note", text: $favoriteNote)
-                }
+                avatarSection
+                infoSection
+                preferencesSection
             }
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
@@ -111,6 +40,91 @@ struct EditProfileView: View {
                 favoriteNote = profileManager.profile.favoriteNote
                 selectedEmoji = profileManager.profile.avatarEmoji
             }
+        }
+    }
+
+    private var avatarSection: some View {
+        Section {
+            HStack {
+                Spacer()
+                VStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.purple.opacity(0.25), .pink.opacity(0.15)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 80, height: 80)
+
+                        Image(systemName: selectedEmoji)
+                            .font(.system(size: 28))
+                            .foregroundStyle(.white)
+                    }
+
+                    emojiPicker
+                }
+                Spacer()
+            }
+        }
+        .listRowBackground(Color.clear)
+    }
+
+    private var emojiPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(iconOptions, id: \.self) { icon in
+                    Button {
+                        withAnimation(.snappy) { selectedEmoji = icon }
+                    } label: {
+                        Image(systemName: icon)
+                            .font(.callout)
+                            .foregroundStyle(selectedEmoji == icon ? .tint : .secondary)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                selectedEmoji == icon
+                                    ? AnyShapeStyle(.tint.opacity(0.15))
+                                    : AnyShapeStyle(Color.clear)
+                            )
+                            .clipShape(.rect(cornerRadius: 10))
+                    }
+                }
+            }
+        }
+        .contentMargins(.horizontal, 0)
+    }
+
+    private var infoSection: some View {
+        Section("Info") {
+            TextField("Display Name", text: $displayName)
+                .textContentType(.name)
+            HStack(spacing: 8) {
+                Image(systemName: "envelope.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                TextField("Email", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+            HStack(spacing: 0) {
+                Text("@")
+                    .foregroundStyle(.secondary)
+                TextField("username", text: $username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+            TextField("Bio", text: $bio, axis: .vertical)
+                .lineLimit(2...4)
+        }
+    }
+
+    private var preferencesSection: some View {
+        Section("Preferences") {
+            TextField("Favorite Note", text: $favoriteNote)
         }
     }
 
