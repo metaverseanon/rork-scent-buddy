@@ -209,9 +209,12 @@ struct AddPerfumeView: View {
     }
 
     private func savePerfume() {
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let trimmedBrand = brand.trimmingCharacters(in: .whitespaces)
+        let trimmedNotes = personalNotes.trimmingCharacters(in: .whitespaces)
         let perfume = Perfume(
-            name: name.trimmingCharacters(in: .whitespaces),
-            brand: brand.trimmingCharacters(in: .whitespaces),
+            name: trimmedName,
+            brand: trimmedBrand,
             concentration: concentration,
             topNotes: topNotes,
             heartNotes: heartNotes,
@@ -219,11 +222,41 @@ struct AddPerfumeView: View {
             season: season,
             occasion: occasion,
             rating: rating,
-            personalNotes: personalNotes.trimmingCharacters(in: .whitespaces),
+            personalNotes: trimmedNotes,
             isFavorite: isFavorite
         )
         modelContext.insert(perfume)
+        syncToSupabase(name: trimmedName, brand: trimmedBrand, notes: trimmedNotes)
         dismiss()
+    }
+
+    private func syncToSupabase(name: String, brand: String, notes: String) {
+        guard let userId = SupabaseService.shared.currentUserId else { return }
+        Task {
+            let item = UserCollectionInsert(
+                user_id: userId,
+                perfume_name: name,
+                perfume_brand: brand,
+                image_url: nil,
+                concentration: concentration,
+                top_notes: topNotes,
+                heart_notes: heartNotes,
+                base_notes: baseNotes,
+                season: season,
+                occasion: occasion,
+                rating: rating,
+                personal_notes: notes,
+                is_favorite: isFavorite
+            )
+            try? await SupabaseService.shared.insertCollectionItem(item)
+            try? await SupabaseService.shared.insertActivity(ActivityFeedInsert(
+                user_id: userId,
+                activity_type: "added_perfume",
+                perfume_name: name,
+                perfume_brand: brand,
+                target_user_id: nil
+            ))
+        }
     }
 }
 

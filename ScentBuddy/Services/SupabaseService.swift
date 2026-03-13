@@ -349,6 +349,169 @@ final class SupabaseService {
         UserDefaults.standard.removeObject(forKey: refreshTokenKey)
         UserDefaults.standard.removeObject(forKey: userIdKey)
     }
+
+    private func authenticatedRequest(url: URL, method: String = "GET", prefer: String? = nil) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        if let prefer { request.setValue(prefer, forHTTPHeaderField: "Prefer") }
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        }
+        return request
+    }
+
+    func fetchUserCollection(userId: String) async throws -> [UserCollectionItem] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let url = URL(string: "\(supabaseURL)/rest/v1/user_collections?user_id=eq.\(userId)&select=*&order=date_added.desc")!
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch collection")
+        }
+        return try JSONDecoder().decode([UserCollectionItem].self, from: data)
+    }
+
+    func fetchUserWishlist(userId: String) async throws -> [UserWishlistItem] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists?user_id=eq.\(userId)&select=*&order=date_added.desc")!
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch wishlist")
+        }
+        return try JSONDecoder().decode([UserWishlistItem].self, from: data)
+    }
+
+    func insertCollectionItem(_ item: UserCollectionInsert) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let url = URL(string: "\(supabaseURL)/rest/v1/user_collections")!
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+        request.httpBody = try JSONEncoder().encode(item)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.message ?? "Failed to sync collection")
+            }
+            throw SupabaseError.serverError("Failed to sync collection")
+        }
+    }
+
+    func insertWishlistItem(_ item: UserWishlistInsert) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists")!
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+        request.httpBody = try JSONEncoder().encode(item)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.message ?? "Failed to sync wishlist")
+            }
+            throw SupabaseError.serverError("Failed to sync wishlist")
+        }
+    }
+
+    func fetchReviews(perfumeName: String, perfumeBrand: String) async throws -> [PerfumeReview] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let encodedName = perfumeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeName
+        let encodedBrand = perfumeBrand.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeBrand
+        let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)&select=*&order=created_at.desc")!
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch reviews")
+        }
+        return try JSONDecoder().decode([PerfumeReview].self, from: data)
+    }
+
+    func fetchUserReviews(userId: String) async throws -> [PerfumeReview] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?user_id=eq.\(userId)&select=*&order=created_at.desc")!
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch reviews")
+        }
+        return try JSONDecoder().decode([PerfumeReview].self, from: data)
+    }
+
+    func insertReview(_ review: PerfumeReviewInsert) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews")!
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+        request.httpBody = try JSONEncoder().encode(review)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.message ?? "Failed to post review")
+            }
+            throw SupabaseError.serverError("Failed to post review")
+        }
+    }
+
+    func fetchReviewLikes(reviewIds: [String]) async throws -> [ReviewLike] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, !reviewIds.isEmpty else { return [] }
+        let ids = reviewIds.joined(separator: ",")
+        let url = URL(string: "\(supabaseURL)/rest/v1/review_likes?review_id=in.(\(ids))&select=*")!
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        return try JSONDecoder().decode([ReviewLike].self, from: data)
+    }
+
+    func toggleReviewLike(userId: String, reviewId: String, isLiked: Bool) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        if isLiked {
+            let url = URL(string: "\(supabaseURL)/rest/v1/review_likes?user_id=eq.\(userId)&review_id=eq.\(reviewId)")!
+            let request = authenticatedRequest(url: url, method: "DELETE")
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+                throw SupabaseError.serverError("Failed to unlike review")
+            }
+        } else {
+            let url = URL(string: "\(supabaseURL)/rest/v1/review_likes")!
+            var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+            request.httpBody = try JSONEncoder().encode(ReviewLikeInsert(user_id: userId, review_id: reviewId))
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+                throw SupabaseError.serverError("Failed to like review")
+            }
+        }
+    }
+
+    func fetchActivityFeed(userIds: [String]) async throws -> [ActivityFeedItem] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, !userIds.isEmpty else { return [] }
+        let ids = userIds.joined(separator: ",")
+        let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed?user_id=in.(\(ids))&select=*&order=created_at.desc&limit=50")!
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch activity feed")
+        }
+        return try JSONDecoder().decode([ActivityFeedItem].self, from: data)
+    }
+
+    func insertActivity(_ activity: ActivityFeedInsert) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed")!
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+        request.httpBody = try JSONEncoder().encode(activity)
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
+    func fetchFollowers(userId: String) async throws -> [SupabaseFollow] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        let url = URL(string: "\(supabaseURL)/rest/v1/follows?following_id=eq.\(userId)&select=*")!
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch followers")
+        }
+        return try JSONDecoder().decode([SupabaseFollow].self, from: data)
+    }
 }
 
 nonisolated struct SupabaseFollowInsert: Encodable, Sendable {

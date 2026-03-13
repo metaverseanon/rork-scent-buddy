@@ -72,6 +72,13 @@ final class SocialService {
             }
             do {
                 try await supabase.followUser(followerId: currentUserId, followingId: userId)
+                try await supabase.insertActivity(ActivityFeedInsert(
+                    user_id: currentUserId,
+                    activity_type: "followed_user",
+                    perfume_name: nil,
+                    perfume_brand: nil,
+                    target_user_id: userId
+                ))
             } catch {
                 followingIds.remove(userId)
                 followingUsers.removeAll { $0.id == userId }

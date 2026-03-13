@@ -167,16 +167,46 @@ struct AddWishlistView: View {
     }
 
     private func saveItem() {
+        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+        let trimmedBrand = brand.trimmingCharacters(in: .whitespaces)
+        let trimmedPrice = estimatedPrice.trimmingCharacters(in: .whitespaces)
+        let trimmedReason = reason.trimmingCharacters(in: .whitespaces)
         let item = WishlistPerfume(
-            name: name.trimmingCharacters(in: .whitespaces),
-            brand: brand.trimmingCharacters(in: .whitespaces),
+            name: trimmedName,
+            brand: trimmedBrand,
             concentration: concentration,
             notes: notes,
-            estimatedPrice: estimatedPrice.trimmingCharacters(in: .whitespaces),
-            reason: reason.trimmingCharacters(in: .whitespaces),
+            estimatedPrice: trimmedPrice,
+            reason: trimmedReason,
             priority: priority
         )
         modelContext.insert(item)
+        syncToSupabase(name: trimmedName, brand: trimmedBrand, price: trimmedPrice, reason: trimmedReason)
         dismiss()
+    }
+
+    private func syncToSupabase(name: String, brand: String, price: String, reason: String) {
+        guard let userId = SupabaseService.shared.currentUserId else { return }
+        Task {
+            let item = UserWishlistInsert(
+                user_id: userId,
+                perfume_name: name,
+                perfume_brand: brand,
+                image_url: nil,
+                concentration: concentration,
+                notes: notes,
+                estimated_price: price,
+                reason: reason,
+                priority: priority
+            )
+            try? await SupabaseService.shared.insertWishlistItem(item)
+            try? await SupabaseService.shared.insertActivity(ActivityFeedInsert(
+                user_id: userId,
+                activity_type: "added_wishlist",
+                perfume_name: name,
+                perfume_brand: brand,
+                target_user_id: nil
+            ))
+        }
     }
 }

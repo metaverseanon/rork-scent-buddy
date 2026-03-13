@@ -8,6 +8,7 @@ struct PerfumeDetailView: View {
     @State private var showingDeleteConfirmation: Bool = false
     @State private var showingEditSheet: Bool = false
     @State private var showingLogWear: Bool = false
+    @State private var showingWriteReview: Bool = false
 
     var body: some View {
         ScrollView {
@@ -64,6 +65,9 @@ struct PerfumeDetailView: View {
         .sheet(isPresented: $showingLogWear) {
             LogWearFromDetailView(perfume: perfume)
         }
+        .sheet(isPresented: $showingWriteReview) {
+            WriteReviewView(perfumeName: perfume.name, perfumeBrand: perfume.brand)
+        }
     }
 
     private var headerSection: some View {
@@ -113,6 +117,8 @@ struct PerfumeDetailView: View {
             if !perfume.personalNotes.isEmpty {
                 personalNotesSection
             }
+
+            reviewsLink
         }
         .padding(16)
     }
@@ -189,6 +195,57 @@ struct PerfumeDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppearanceManager.shared.theme.cardColor)
         .clipShape(.rect(cornerRadius: 14))
+    }
+
+    private var reviewsLink: some View {
+        VStack(spacing: 12) {
+            NavigationLink {
+                PerfumeReviewsView(perfumeName: perfume.name, perfumeBrand: perfume.brand)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "text.bubble.fill")
+                        .font(.body)
+                        .foregroundStyle(.orange)
+                        .frame(width: 36, height: 36)
+                        .background(.orange.opacity(0.12))
+                        .clipShape(.rect(cornerRadius: 10))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Community Reviews")
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.primary)
+                        Text("See what others think")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(14)
+                .background(AppearanceManager.shared.theme.cardColor)
+                .clipShape(.rect(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+
+            if SupabaseService.shared.currentUserId != nil {
+                Button {
+                    showingWriteReview = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.pencil")
+                        Text("Write a Review")
+                            .fontWeight(.semibold)
+                    }
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(.tint)
+                    .foregroundStyle(.white)
+                    .clipShape(.rect(cornerRadius: 12))
+                }
+            }
+        }
     }
 
     private var headerColor: Color {

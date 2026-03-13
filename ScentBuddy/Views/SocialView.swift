@@ -2,12 +2,13 @@ import SwiftUI
 
 struct SocialView: View {
     @State private var socialService = SocialService.shared
-    @State private var selectedTab: SocialTab = .discover
+    @State private var selectedTab: SocialTab = .feed
     @State private var searchText: String = ""
 
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
     nonisolated private enum SocialTab: String, CaseIterable {
+        case feed = "Feed"
         case discover = "Discover"
         case following = "Following"
     }
@@ -60,17 +61,22 @@ struct SocialView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 switch selectedTab {
+                case .feed:
+                    ActivityFeedView()
                 case .discover:
                     if socialService.isLoading {
                         ProgressView()
                             .frame(maxWidth: .infinity, minHeight: 200)
                     } else {
                         ForEach(filteredDiscoverUsers) { user in
-                            UserCard(user: user, isFollowing: socialService.isFollowing(user.id)) {
-                                Task {
-                                    await socialService.toggleFollow(user.id)
+                            NavigationLink(value: user.id) {
+                                UserCard(user: user, isFollowing: socialService.isFollowing(user.id)) {
+                                    Task {
+                                        await socialService.toggleFollow(user.id)
+                                    }
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 case .following:
@@ -83,17 +89,26 @@ struct SocialView: View {
                         .frame(maxWidth: .infinity, minHeight: 300)
                     } else {
                         ForEach(filteredFollowingUsers) { user in
-                            UserCard(user: user, isFollowing: true) {
-                                Task {
-                                    await socialService.toggleFollow(user.id)
+                            NavigationLink(value: user.id) {
+                                UserCard(user: user, isFollowing: true) {
+                                    Task {
+                                        await socialService.toggleFollow(user.id)
+                                    }
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
             }
             .padding(.horizontal)
             .padding(.bottom, 20)
+        }
+        .navigationDestination(for: String.self) { userId in
+            if let user = socialService.discoveredUsers.first(where: { $0.id == userId }) ??
+               socialService.followingUsers.first(where: { $0.id == userId }) {
+                UserProfileDetailView(user: user)
+            }
         }
     }
 
@@ -169,7 +184,9 @@ struct UserCard: View {
 
             HStack(spacing: 16) {
                 Label("\(user.collectionCount) fragrances", systemImage: "drop.fill")
-                Label(user.favoriteNote, systemImage: "heart.fill")
+                if !user.favoriteNote.isEmpty {
+                    Label(user.favoriteNote, systemImage: "heart.fill")
+                }
                 Spacer()
             }
             .font(.caption2)
