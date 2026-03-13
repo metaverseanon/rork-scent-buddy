@@ -224,6 +224,114 @@ final class SupabaseService {
         return profiles.first
     }
 
+    func fetchAllProfiles() async throws -> [SupabaseProfile] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw SupabaseError.notConfigured
+        }
+
+        let url = URL(string: "\(supabaseURL)/rest/v1/profiles?select=*&order=created_at.desc")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch profiles")
+        }
+
+        return try JSONDecoder().decode([SupabaseProfile].self, from: data)
+    }
+
+    func fetchFollowing(userId: String) async throws -> [SupabaseFollow] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw SupabaseError.notConfigured
+        }
+
+        let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(userId)&select=*")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to fetch follows")
+        }
+
+        return try JSONDecoder().decode([SupabaseFollow].self, from: data)
+    }
+
+    func followUser(followerId: String, followingId: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw SupabaseError.notConfigured
+        }
+
+        let url = URL(string: "\(supabaseURL)/rest/v1/follows")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.setValue("return=minimal", forHTTPHeaderField: "Prefer")
+
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let body = SupabaseFollowInsert(follower_id: followerId, following_id: followingId)
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+            if let errorResp = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                let message = errorResp.message ?? errorResp.msg ?? "Failed to follow user"
+                throw SupabaseError.serverError(message)
+            }
+            throw SupabaseError.serverError("Failed to follow user")
+        }
+    }
+
+    func unfollowUser(followerId: String, followingId: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw SupabaseError.notConfigured
+        }
+
+        let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(followerId)&following_id=eq.\(followingId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to unfollow user")
+        }
+    }
+
     private func saveSession(token: String, refreshToken: String?, userId: String) {
         accessToken = token
         currentUserId = userId
@@ -241,6 +349,18 @@ final class SupabaseService {
         UserDefaults.standard.removeObject(forKey: refreshTokenKey)
         UserDefaults.standard.removeObject(forKey: userIdKey)
     }
+}
+
+nonisolated struct SupabaseFollowInsert: Encodable, Sendable {
+    let follower_id: String
+    let following_id: String
+}
+
+nonisolated struct SupabaseFollow: Codable, Sendable {
+    let id: String
+    let follower_id: String
+    let following_id: String
+    let created_at: String?
 }
 
 nonisolated enum SupabaseError: LocalizedError, Sendable {

@@ -67,8 +67,8 @@ struct SocialView: View {
                     } else {
                         ForEach(filteredDiscoverUsers) { user in
                             UserCard(user: user, isFollowing: socialService.isFollowing(user.id)) {
-                                withAnimation(.snappy) {
-                                    socialService.toggleFollow(user.id)
+                                Task {
+                                    await socialService.toggleFollow(user.id)
                                 }
                             }
                         }
@@ -84,8 +84,8 @@ struct SocialView: View {
                     } else {
                         ForEach(filteredFollowingUsers) { user in
                             UserCard(user: user, isFollowing: true) {
-                                withAnimation(.snappy) {
-                                    socialService.toggleFollow(user.id)
+                                Task {
+                                    await socialService.toggleFollow(user.id)
                                 }
                             }
                         }

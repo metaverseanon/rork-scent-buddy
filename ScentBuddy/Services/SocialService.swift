@@ -9,12 +9,24 @@ nonisolated struct SocialProfile: Codable, Sendable, Identifiable {
     let favoriteNote: String
     let bio: String
     let memberSince: Date
-}
 
-nonisolated struct FollowRelation: Codable, Sendable {
-    let followerId: String
-    let followingId: String
-    let timestamp: Date
+    init(from supabaseProfile: SupabaseProfile) {
+        self.id = supabaseProfile.id
+        self.username = supabaseProfile.username ?? "user"
+        self.displayName = supabaseProfile.display_name ?? "User"
+        self.avatarEmoji = supabaseProfile.avatar_emoji ?? "🧴"
+        self.collectionCount = 0
+        self.favoriteNote = supabaseProfile.favorite_note ?? ""
+        self.bio = supabaseProfile.bio ?? ""
+
+        if let dateStr = supabaseProfile.created_at {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            self.memberSince = formatter.date(from: dateStr) ?? Date()
+        } else {
+            self.memberSince = Date()
+        }
+    }
 }
 
 @Observable
@@ -24,17 +36,13 @@ final class SocialService {
     private(set) var discoveredUsers: [SocialProfile] = []
     private(set) var followingUsers: [SocialProfile] = []
     private(set) var isLoading: Bool = false
+    private(set) var errorMessage: String?
 
-    private var followingIds: Set<String> {
-        didSet { saveFollowing() }
-    }
+    private var followingIds: Set<String> = []
 
-    private let followingKey = "following_user_ids"
+    private let supabase = SupabaseService.shared
 
-    private init() {
-        let saved = UserDefaults.standard.stringArray(forKey: followingKey) ?? []
-        self.followingIds = Set(saved)
-    }
+    private init() {}
 
     var followingCount: Int { followingIds.count }
 
@@ -42,40 +50,56 @@ final class SocialService {
         followingIds.contains(userId)
     }
 
-    func toggleFollow(_ userId: String) {
+    func toggleFollow(_ userId: String) async {
+        guard let currentUserId = supabase.currentUserId else { return }
+
         if followingIds.contains(userId) {
             followingIds.remove(userId)
             followingUsers.removeAll { $0.id == userId }
+            do {
+                try await supabase.unfollowUser(followerId: currentUserId, followingId: userId)
+            } catch {
+                followingIds.insert(userId)
+                if let user = discoveredUsers.first(where: { $0.id == userId }) {
+                    followingUsers.append(user)
+                }
+                errorMessage = error.localizedDescription
+            }
         } else {
             followingIds.insert(userId)
             if let user = discoveredUsers.first(where: { $0.id == userId }) {
                 followingUsers.append(user)
+            }
+            do {
+                try await supabase.followUser(followerId: currentUserId, followingId: userId)
+            } catch {
+                followingIds.remove(userId)
+                followingUsers.removeAll { $0.id == userId }
+                errorMessage = error.localizedDescription
             }
         }
     }
 
     func loadDiscoveredUsers() async {
         isLoading = true
+        errorMessage = nil
         defer { isLoading = false }
 
-        try? await Task.sleep(for: .milliseconds(800))
+        do {
+            let profiles = try await supabase.fetchAllProfiles()
+            let currentId = supabase.currentUserId
 
-        let sampleUsers: [SocialProfile] = [
-            SocialProfile(id: "usr_001", username: "scentlover", displayName: "Alex Noir", avatarEmoji: "🖤", collectionCount: 47, favoriteNote: "Oud", bio: "Niche fragrance collector. Oud enthusiast.", memberSince: Date().addingTimeInterval(-86400 * 180)),
-            SocialProfile(id: "usr_002", username: "floralbabe", displayName: "Lily Rose", avatarEmoji: "🌸", collectionCount: 32, favoriteNote: "Rose", bio: "Floral & feminine scents only.", memberSince: Date().addingTimeInterval(-86400 * 90)),
-            SocialProfile(id: "usr_003", username: "woodsy.vibes", displayName: "Marcus Cedar", avatarEmoji: "🌿", collectionCount: 28, favoriteNote: "Sandalwood", bio: "Woody fragrances & leather. MFK fan.", memberSince: Date().addingTimeInterval(-86400 * 120)),
-            SocialProfile(id: "usr_004", username: "vanillacloud", displayName: "Sophie Sweet", avatarEmoji: "✨", collectionCount: 55, favoriteNote: "Vanilla", bio: "Sweet gourmand lover. 200+ tested.", memberSince: Date().addingTimeInterval(-86400 * 365)),
-            SocialProfile(id: "usr_005", username: "freshking", displayName: "David Blue", avatarEmoji: "💎", collectionCount: 19, favoriteNote: "Bergamot", bio: "Fresh & clean scents for everyday.", memberSince: Date().addingTimeInterval(-86400 * 60)),
-            SocialProfile(id: "usr_006", username: "amber.witch", displayName: "Nina Amber", avatarEmoji: "🔥", collectionCount: 41, favoriteNote: "Amber", bio: "Oriental & amber obsessed.", memberSince: Date().addingTimeInterval(-86400 * 200)),
-            SocialProfile(id: "usr_007", username: "creed.collector", displayName: "James Royal", avatarEmoji: "💐", collectionCount: 63, favoriteNote: "Iris", bio: "Creed & Tom Ford private blend collector.", memberSince: Date().addingTimeInterval(-86400 * 400)),
-            SocialProfile(id: "usr_008", username: "citrus.queen", displayName: "Maria Sol", avatarEmoji: "🍊", collectionCount: 22, favoriteNote: "Lemon", bio: "Citrus & Mediterranean vibes.", memberSince: Date().addingTimeInterval(-86400 * 75)),
-        ]
+            discoveredUsers = profiles
+                .filter { $0.id != currentId }
+                .map { SocialProfile(from: $0) }
 
-        discoveredUsers = sampleUsers
-        followingUsers = sampleUsers.filter { followingIds.contains($0.id) }
-    }
-
-    private func saveFollowing() {
-        UserDefaults.standard.set(Array(followingIds), forKey: followingKey)
+            if let currentId {
+                let follows = try await supabase.fetchFollowing(userId: currentId)
+                followingIds = Set(follows.map { $0.following_id })
+                followingUsers = discoveredUsers.filter { followingIds.contains($0.id) }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
