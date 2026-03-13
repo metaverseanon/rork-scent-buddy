@@ -66,6 +66,7 @@ final class SupabaseService {
         }
         self.supabaseURL = rawURL
         self.supabaseKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY.trimmingCharacters(in: .whitespacesAndNewlines)
+        print("[SupabaseService] Initialized with URL: '\(rawURL)' key length: \(self.supabaseKey.count)")
 
         if let token = UserDefaults.standard.string(forKey: tokenKey),
            let userId = UserDefaults.standard.string(forKey: userIdKey),
@@ -78,16 +79,18 @@ final class SupabaseService {
 
     func signUp(email: String, password: String) async throws -> SupabaseUser {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.serverError("Supabase is not configured. Please check your environment variables.")
+            throw SupabaseError.serverError("Supabase is not configured. URL empty: \(supabaseURL.isEmpty), Key empty: \(supabaseKey.isEmpty)")
         }
 
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup") else {
-            throw SupabaseError.serverError("Invalid Supabase URL. Please check EXPO_PUBLIC_SUPABASE_URL.")
+        let urlString = "\(supabaseURL)/auth/v1/signup"
+        guard let url = URL(string: urlString) else {
+            throw SupabaseError.serverError("Invalid Supabase URL: \(urlString)")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.timeoutInterval = 30
 
         let body: [String: String] = ["email": email, "password": password]
         request.httpBody = try JSONEncoder().encode(body)
@@ -96,8 +99,10 @@ final class SupabaseService {
         let response: URLResponse
         do {
             (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            throw SupabaseError.serverError("Connection failed (\(urlError.code.rawValue)): \(urlError.localizedDescription)")
         } catch {
-            throw SupabaseError.serverError("Could not connect to server. Please check your internet connection.")
+            throw SupabaseError.serverError("Request failed: \(error.localizedDescription)")
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -128,16 +133,18 @@ final class SupabaseService {
 
     func signIn(email: String, password: String) async throws -> SupabaseUser {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.serverError("Supabase is not configured. Please check your environment variables.")
+            throw SupabaseError.serverError("Supabase is not configured. URL empty: \(supabaseURL.isEmpty), Key empty: \(supabaseKey.isEmpty)")
         }
 
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else {
-            throw SupabaseError.serverError("Invalid Supabase URL. Please check EXPO_PUBLIC_SUPABASE_URL.")
+        let urlString = "\(supabaseURL)/auth/v1/token?grant_type=password"
+        guard let url = URL(string: urlString) else {
+            throw SupabaseError.serverError("Invalid Supabase URL: \(urlString)")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.timeoutInterval = 30
 
         let body: [String: String] = ["email": email, "password": password]
         request.httpBody = try JSONEncoder().encode(body)
@@ -146,8 +153,10 @@ final class SupabaseService {
         let response: URLResponse
         do {
             (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            throw SupabaseError.serverError("Connection failed (\(urlError.code.rawValue)): \(urlError.localizedDescription)")
         } catch {
-            throw SupabaseError.serverError("Could not connect to server. Please check your internet connection.")
+            throw SupabaseError.serverError("Request failed: \(error.localizedDescription)")
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -196,6 +205,7 @@ final class SupabaseService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
         request.setValue("return=minimal", forHTTPHeaderField: "Prefer")
+        request.timeoutInterval = 30
 
         if let token = accessToken {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -205,18 +215,34 @@ final class SupabaseService {
 
         request.httpBody = try JSONEncoder().encode(profile)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            throw SupabaseError.serverError("Profile save failed (\(urlError.code.rawValue)): \(urlError.localizedDescription)")
+        } catch {
+            throw SupabaseError.serverError("Profile save failed: \(error.localizedDescription)")
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw SupabaseError.networkError
         }
 
+        if httpResponse.statusCode == 409 || httpResponse.statusCode == 23505 {
+            return
+        }
+
         if httpResponse.statusCode >= 400 {
             if let errorResp = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
                 let message = errorResp.message ?? errorResp.msg ?? "Failed to create profile"
+                if message.contains("duplicate") || message.contains("already exists") {
+                    return
+                }
                 throw SupabaseError.serverError(message)
             }
-            throw SupabaseError.serverError("Failed to create profile")
+            let bodyStr = String(data: data, encoding: .utf8) ?? "no body"
+            throw SupabaseError.serverError("Failed to create profile (\(httpResponse.statusCode)): \(bodyStr)")
         }
     }
 
