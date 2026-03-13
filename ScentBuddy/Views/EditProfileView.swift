@@ -9,9 +9,9 @@ struct EditProfileView: View {
     @State private var username: String = ""
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
-    @State private var selectedEmoji: String = "\u{1F338}"
+    @State private var selectedEmoji: String = "🌸"
 
-    private let emojiOptions = ["\u{1F338}", "\u{1F525}", "\u{1F48E}", "\u{1F319}", "\u{1F34A}", "\u{1F5A4}", "\u{1F49C}", "\u{1F339}", "\u{2B50}", "\u{1F30A}", "\u{1F343}", "\u{2601}\u{FE0F}"]
+    private let emojiOptions = ["🌸", "🔥", "💎", "🌙", "🍊", "🖤", "💜", "🌹", "⭐", "🌊", "🍃", "☁️"]
 
     var body: some View {
         NavigationStack {
