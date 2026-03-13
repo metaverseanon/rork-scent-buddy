@@ -147,8 +147,8 @@ struct UserCard: View {
                                 .font(.caption.bold())
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 6)
-                                .background(isFollowing ? theme.chipColor : .tint)
-                                .foregroundStyle(isFollowing ? .primary : .white)
+                                .background(isFollowing ? theme.chipColor : Color.accentColor)
+                                .foregroundStyle(isFollowing ? Color.primary : Color.white)
                                 .clipShape(Capsule())
                         }
                     }
