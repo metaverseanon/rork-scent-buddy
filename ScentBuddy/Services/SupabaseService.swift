@@ -35,6 +35,14 @@ nonisolated struct SupabaseProfileInsert: Encodable, Sendable {
     let avatar_emoji: String
 }
 
+nonisolated struct SupabaseProfileUpdate: Encodable, Sendable {
+    let display_name: String
+    let username: String
+    let bio: String
+    let favorite_note: String
+    let avatar_emoji: String
+}
+
 nonisolated struct SupabaseErrorResponse: Codable, Sendable {
     let error: String?
     let error_description: String?
@@ -236,6 +244,33 @@ final class SupabaseService {
             let bodyStr = String(data: data, encoding: .utf8) ?? "no body"
             throw SupabaseError.serverError("Failed to create profile (\(httpResponse.statusCode)): \(bodyStr)")
         }
+    }
+
+    func refreshTokenIfNeeded() async {
+        guard let refreshToken = UserDefaults.standard.string(forKey: refreshTokenKey),
+              !refreshToken.isEmpty,
+              !supabaseURL.isEmpty,
+              !supabaseKey.isEmpty else { return }
+
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=refresh_token") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.timeoutInterval = 15
+
+        let body: [String: String] = ["refresh_token": refreshToken]
+        request.httpBody = try? JSONEncoder().encode(body)
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse, http.statusCode < 400,
+              let authResponse = try? JSONDecoder().decode(SupabaseAuthResponse.self, from: data),
+              let newToken = authResponse.access_token,
+              let user = authResponse.user else {
+            return
+        }
+
+        saveSession(token: newToken, refreshToken: authResponse.refresh_token ?? refreshToken, userId: user.id)
     }
 
     func fetchProfile(userId: String) async throws -> SupabaseProfile? {
@@ -562,6 +597,40 @@ final class SupabaseService {
             throw SupabaseError.serverError("Failed to fetch followers")
         }
         return try JSONDecoder().decode([SupabaseFollow].self, from: data)
+    }
+
+    func updateProfile(userId: String, update: SupabaseProfileUpdate) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw SupabaseError.serverError("Supabase is not configured.")
+        }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?id=eq.\(userId)") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
+        var request = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
+        request.httpBody = try JSONEncoder().encode(update)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseError.networkError
+        }
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            var retryRequest = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
+            retryRequest.httpBody = try JSONEncoder().encode(update)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: retryData) {
+                    throw SupabaseError.serverError(e.message ?? "Failed to update profile")
+                }
+                throw SupabaseError.serverError("Failed to update profile")
+            }
+            return
+        }
+        if http.statusCode >= 400 {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.message ?? "Failed to update profile")
+            }
+            throw SupabaseError.serverError("Failed to update profile (\(http.statusCode))")
+        }
     }
 }
 

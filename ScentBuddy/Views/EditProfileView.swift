@@ -2,7 +2,7 @@ import SwiftUI
 
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
-    private var profileManager: UserProfileManager { UserProfileManager.shared }
+    @State private var profileManager = UserProfileManager.shared
 
     @State private var displayName: String = ""
     @State private var email: String = ""
@@ -10,6 +10,8 @@ struct EditProfileView: View {
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
     @State private var selectedEmoji: String = "drop.fill"
+    @State private var isSaving: Bool = false
+    @State private var saveError: String?
 
     private let iconOptions = ["drop.fill", "flame.fill", "star.fill", "moon.fill", "leaf.fill", "heart.fill", "sparkles", "crown.fill", "bolt.fill", "cloud.fill", "wind", "eye.fill"]
 
@@ -25,13 +27,19 @@ struct EditProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveProfile() }
-                        .fontWeight(.semibold)
-                        .disabled(displayName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") { saveProfile() }
+                            .fontWeight(.semibold)
+                            .disabled(displayName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
                 }
             }
+            .interactiveDismissDisabled(isSaving)
             .onAppear {
                 displayName = profileManager.profile.displayName
                 email = profileManager.profile.email
@@ -98,17 +106,23 @@ struct EditProfileView: View {
 
     private var infoSection: some View {
         Section("Info") {
+            if let error = saveError {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
             TextField("Display Name", text: $displayName)
                 .textContentType(.name)
             HStack(spacing: 8) {
                 Image(systemName: "envelope.fill")
                     .foregroundStyle(.secondary)
                     .font(.subheadline)
-                TextField("Email", text: $email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+                Text(email)
+                    .foregroundStyle(.secondary)
             }
             HStack(spacing: 0) {
                 Text("@")
@@ -129,12 +143,30 @@ struct EditProfileView: View {
     }
 
     private func saveProfile() {
-        profileManager.profile.displayName = displayName.trimmingCharacters(in: .whitespaces)
-        profileManager.profile.email = email.trimmingCharacters(in: .whitespaces).lowercased()
-        profileManager.profile.username = username.trimmingCharacters(in: .whitespaces).lowercased()
-        profileManager.profile.bio = bio.trimmingCharacters(in: .whitespaces)
-        profileManager.profile.favoriteNote = favoriteNote.trimmingCharacters(in: .whitespaces)
-        profileManager.profile.avatarEmoji = selectedEmoji
-        dismiss()
+        let trimmedName = displayName.trimmingCharacters(in: .whitespaces)
+        let trimmedUsername = username.trimmingCharacters(in: .whitespaces).lowercased()
+        let trimmedBio = bio.trimmingCharacters(in: .whitespaces)
+        let trimmedNote = favoriteNote.trimmingCharacters(in: .whitespaces)
+
+        isSaving = true
+        saveError = nil
+
+        Task {
+            let success = await profileManager.updateProfile(
+                displayName: trimmedName,
+                username: trimmedUsername,
+                bio: trimmedBio,
+                favoriteNote: trimmedNote,
+                avatarEmoji: selectedEmoji
+            )
+
+            isSaving = false
+
+            if success {
+                dismiss()
+            } else {
+                saveError = profileManager.errorMessage ?? "Failed to save profile"
+            }
+        }
     }
 }

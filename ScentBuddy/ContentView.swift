@@ -29,11 +29,13 @@ struct ContentView: View {
                     .zIndex(1)
             }
         }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                withAnimation(.easeOut(duration: 0.5)) {
-                    showSplash = false
-                }
+        .task {
+            try? await Task.sleep(for: .seconds(2.0))
+            withAnimation(.easeOut(duration: 0.5)) {
+                showSplash = false
+            }
+            if SupabaseService.shared.isAuthenticated {
+                await UserProfileManager.shared.refreshProfile()
             }
         }
     }

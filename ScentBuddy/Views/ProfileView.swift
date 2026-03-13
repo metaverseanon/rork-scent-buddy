@@ -4,6 +4,7 @@ struct ProfileView: View {
     @State private var showingCreateAccount: Bool = false
     @State private var showingLogin: Bool = false
     @State private var showingSettings: Bool = false
+    @State private var showingEditProfile: Bool = false
 
     var body: some View {
         ScrollView {
@@ -28,6 +29,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showingLogin) {
             LoginView()
+        }
+        .sheet(isPresented: $showingEditProfile) {
+            EditProfileView()
         }
         .navigationDestination(isPresented: $showingSettings) {
             SettingsView()
@@ -117,6 +121,21 @@ struct ProfileView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Button {
+                showingEditProfile = true
+            } label: {
+                HStack {
+                    Image(systemName: "pencil")
+                    Text("Edit Profile")
+                }
+                .font(.subheadline.bold())
+                .frame(maxWidth: .infinity)
+                .padding(14)
+                .background(Color.accentColor)
+                .foregroundStyle(.white)
+                .clipShape(.rect(cornerRadius: 14))
             }
 
             Button(role: .destructive) {

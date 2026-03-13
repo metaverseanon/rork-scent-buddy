@@ -92,7 +92,7 @@ final class UserProfileManager {
                     email: supaProfile.email ?? email,
                     bio: supaProfile.bio ?? "",
                     favoriteNote: supaProfile.favorite_note ?? "",
-                    memberSince: Date(),
+                    memberSince: parseDate(supaProfile.created_at),
                     avatarEmoji: supaProfile.avatar_emoji ?? "drop.fill"
                 )
             } else {
@@ -116,11 +116,76 @@ final class UserProfileManager {
         }
     }
 
+    func updateProfile(
+        displayName: String,
+        username: String,
+        bio: String,
+        favoriteNote: String,
+        avatarEmoji: String
+    ) async -> Bool {
+        guard let userId = SupabaseService.shared.currentUserId else {
+            errorMessage = "Not signed in"
+            return false
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let update = SupabaseProfileUpdate(
+                display_name: displayName,
+                username: username,
+                bio: bio,
+                favorite_note: favoriteNote,
+                avatar_emoji: avatarEmoji
+            )
+            try await SupabaseService.shared.updateProfile(userId: userId, update: update)
+
+            profile.displayName = displayName
+            profile.username = username
+            profile.bio = bio
+            profile.favoriteNote = favoriteNote
+            profile.avatarEmoji = avatarEmoji
+
+            isLoading = false
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoading = false
+            return false
+        }
+    }
+
+    func refreshProfile() async {
+        guard let userId = SupabaseService.shared.currentUserId else { return }
+
+        await SupabaseService.shared.refreshTokenIfNeeded()
+
+        if let supaProfile = try? await SupabaseService.shared.fetchProfile(userId: userId) {
+            profile = UserProfile(
+                displayName: supaProfile.display_name ?? profile.displayName,
+                username: supaProfile.username ?? profile.username,
+                email: supaProfile.email ?? profile.email,
+                bio: supaProfile.bio ?? "",
+                favoriteNote: supaProfile.favorite_note ?? "",
+                memberSince: parseDate(supaProfile.created_at),
+                avatarEmoji: supaProfile.avatar_emoji ?? "drop.fill"
+            )
+        }
+    }
+
     func signOut() {
         Task {
             await SupabaseService.shared.signOut()
         }
         profile = UserProfile()
         UserDefaults.standard.removeObject(forKey: key)
+    }
+
+    private func parseDate(_ dateStr: String?) -> Date {
+        guard let dateStr else { return Date() }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: dateStr) ?? Date()
     }
 }
