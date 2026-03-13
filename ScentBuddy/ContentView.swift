@@ -65,5 +65,11 @@ struct ContentView: View {
         }
         .tint(theme.tintColor)
         .preferredColorScheme(theme.colorScheme)
+        .onAppear {
+            let tabBarAppearance = UITabBarAppearance()
+            tabBarAppearance.configureWithDefaultBackground()
+            UITabBar.appearance().standardAppearance = tabBarAppearance
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        }
     }
 }
