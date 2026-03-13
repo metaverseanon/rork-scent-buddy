@@ -110,6 +110,25 @@ struct RecommendationService {
         return scored.map(\.0)
     }
 
+    private func calculateMatchPercentage(notes: [String], noteProfile: [String: Double]) -> Int {
+        guard !notes.isEmpty else { return 50 }
+
+        let matchingNotes = notes.filter { noteProfile[$0.lowercased()] ?? 0 > 0 }
+        guard !matchingNotes.isEmpty else { return Int.random(in: 45...55) }
+
+        let maxScore = noteProfile.values.sorted(by: >).first ?? 1.0
+        let totalAffinity = matchingNotes.reduce(0.0) { $0 + (noteProfile[$1.lowercased()] ?? 0) }
+        let avgAffinity = totalAffinity / Double(matchingNotes.count)
+        let normalizedAffinity = min(avgAffinity / max(maxScore, 1.0), 1.0)
+
+        let coverageRatio = Double(matchingNotes.count) / Double(notes.count)
+
+        let raw = (coverageRatio * 0.4 + normalizedAffinity * 0.6) * 100.0
+        let base = Int(raw * 0.55 + 35)
+        let jitter = abs(notes.joined().hashValue) % 7 - 3
+        return min(98, max(48, base + jitter))
+    }
+
     private func buildFamilyRecommendations(family: String, noteProfile: [String: Double], topNotes: [String]) -> [RecommendedPerfume] {
         let familyRecs: [String: [(String, String, String, [String])]] = [
             "woody": [
@@ -153,7 +172,7 @@ struct RecommendationService {
 
         return recs.map { name, brand, concentration, notes in
             let matchingNotes = notes.filter { noteProfile[$0.lowercased()] ?? 0 > 0 }
-            let percentage = min(96, max(60, Int(Double(matchingNotes.count) / Double(max(notes.count, 1)) * 100) + 40))
+            let percentage = calculateMatchPercentage(notes: notes, noteProfile: noteProfile)
             let reason: String
             if matchingNotes.count >= 2 {
                 reason = "Matches your love for \(matchingNotes.prefix(2).joined(separator: " & "))"
@@ -179,7 +198,7 @@ struct RecommendationService {
     private func buildGenericRecommendations(noteProfile: [String: Double], topNotes: [String]) -> [RecommendedPerfume] {
         defaultRecommendations.map { rec in
             let matchingNotes = rec.notes.filter { noteProfile[$0.lowercased()] ?? 0 > 0 }
-            let percentage = min(92, max(55, Int(Double(matchingNotes.count) / Double(max(rec.notes.count, 1)) * 100) + 40))
+            let percentage = calculateMatchPercentage(notes: rec.notes, noteProfile: noteProfile)
             let reason = matchingNotes.count >= 2
                 ? "Matches your love for \(matchingNotes.prefix(2).joined(separator: " & "))"
                 : rec.matchReason
