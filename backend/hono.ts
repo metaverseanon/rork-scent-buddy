@@ -8,7 +8,7 @@ const app = new Hono();
 app.use("*", cors());
 
 app.get("/", (c) => {
-  return c.json({ status: "ok", message: "ScentBuddy API is running" });
+  return c.json({ status: "ok", message: "ScentBuddy API is running", version: "1.1" });
 });
 
 app.route("/trending", trendingRouter);
