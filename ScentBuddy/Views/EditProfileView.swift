@@ -9,9 +9,9 @@ struct EditProfileView: View {
     @State private var username: String = ""
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
-    @State private var selectedEmoji: String = "🌸"
+    @State private var selectedEmoji: String = "drop.fill"
 
-    private let emojiOptions = ["🌸", "🔥", "💎", "🌙", "🍊", "🖤", "💜", "🌹", "⭐", "🌊", "🍃", "☁️"]
+    private let iconOptions = ["drop.fill", "flame.fill", "star.fill", "moon.fill", "leaf.fill", "heart.fill", "sparkles", "crown.fill", "bolt.fill", "cloud.fill", "wind", "eye.fill"]
 
     var body: some View {
         NavigationStack {
@@ -31,21 +31,23 @@ struct EditProfileView: View {
                                     )
                                     .frame(width: 80, height: 80)
 
-                                Text(selectedEmoji)
-                                    .font(.system(size: 40))
+                                Image(systemName: selectedEmoji)
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(.white)
                             }
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    ForEach(emojiOptions, id: \.self) { emoji in
+                                    ForEach(iconOptions, id: \.self) { icon in
                                         Button {
-                                            withAnimation(.snappy) { selectedEmoji = emoji }
+                                            withAnimation(.snappy) { selectedEmoji = icon }
                                         } label: {
-                                            Text(emoji)
-                                                .font(.title3)
+                                            Image(systemName: icon)
+                                                .font(.callout)
+                                                .foregroundStyle(selectedEmoji == icon ? .tint : .secondary)
                                                 .frame(width: 36, height: 36)
                                                 .background(
-                                                    selectedEmoji == emoji
+                                                    selectedEmoji == icon
                                                         ? AnyShapeStyle(.tint.opacity(0.15))
                                                         : AnyShapeStyle(Color.clear)
                                                 )

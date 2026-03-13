@@ -146,8 +146,9 @@ struct UserCard: View {
                     Circle()
                         .fill(avatarGradient)
                         .frame(width: 52, height: 52)
-                    Text(user.avatarEmoji)
-                        .font(.title2)
+                    Image(systemName: user.avatarEmoji)
+                        .font(.title3)
+                        .foregroundStyle(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {

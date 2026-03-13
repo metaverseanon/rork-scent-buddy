@@ -93,7 +93,7 @@ final class UserProfileManager {
                     bio: supaProfile.bio ?? "",
                     favoriteNote: supaProfile.favorite_note ?? "",
                     memberSince: Date(),
-                    avatarEmoji: supaProfile.avatar_emoji ?? "🌸"
+                    avatarEmoji: supaProfile.avatar_emoji ?? "drop.fill"
                 )
             } else {
                 profile = UserProfile(
@@ -103,7 +103,7 @@ final class UserProfileManager {
                     bio: "",
                     favoriteNote: "",
                     memberSince: Date(),
-                    avatarEmoji: "🌸"
+                    avatarEmoji: "drop.fill"
                 )
             }
 

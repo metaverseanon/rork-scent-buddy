@@ -11,7 +11,7 @@ struct CreateAccountView: View {
     @State private var username: String = ""
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
-    @State private var selectedEmoji: String = "🌸"
+    @State private var selectedEmoji: String = "drop.fill"
     @State private var avatarMode: AvatarMode = .emoji
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var avatarImageData: Data?
@@ -21,7 +21,7 @@ struct CreateAccountView: View {
 
     @FocusState private var focusedField: Field?
 
-    private let emojiOptions = ["🌸", "🔥", "💎", "🌙", "🍊", "🖤", "💜", "🌹", "⭐", "🌊", "🍃", "☁️"]
+    private let iconOptions = ["drop.fill", "flame.fill", "star.fill", "moon.fill", "leaf.fill", "heart.fill", "sparkles", "crown.fill", "bolt.fill", "cloud.fill", "wind", "eye.fill"]
 
     nonisolated private enum Field: Hashable {
         case displayName, email, password, confirmPassword, username, bio, favoriteNote
@@ -92,8 +92,9 @@ struct CreateAccountView: View {
                         .frame(width: 100, height: 100)
                         .clipShape(Circle())
                 } else {
-                    Text(selectedEmoji)
-                        .font(.system(size: 48))
+                    Image(systemName: selectedEmoji)
+                        .font(.system(size: 32))
+                        .foregroundStyle(.white)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
@@ -139,21 +140,22 @@ struct CreateAccountView: View {
 
             if avatarMode == .emoji {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 10) {
-                    ForEach(emojiOptions, id: \.self) { emoji in
+                    ForEach(iconOptions, id: \.self) { icon in
                         Button {
-                            withAnimation(.snappy) { selectedEmoji = emoji }
+                            withAnimation(.snappy) { selectedEmoji = icon }
                         } label: {
-                            Text(emoji)
-                                .font(.title2)
+                            Image(systemName: icon)
+                                .font(.body)
+                                .foregroundStyle(selectedEmoji == icon ? .tint : .secondary)
                                 .frame(width: 44, height: 44)
                                 .background(
-                                    selectedEmoji == emoji
+                                    selectedEmoji == icon
                                         ? AnyShapeStyle(.tint.opacity(0.15))
                                         : AnyShapeStyle(AppearanceManager.shared.theme.chipColor)
                                 )
                                 .clipShape(.rect(cornerRadius: 12))
                                 .overlay {
-                                    if selectedEmoji == emoji {
+                                    if selectedEmoji == icon {
                                         RoundedRectangle(cornerRadius: 12)
                                             .strokeBorder(.tint, lineWidth: 2)
                                     }

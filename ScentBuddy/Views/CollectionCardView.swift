@@ -116,9 +116,10 @@ struct ShareCardContent: View {
                     }
                 }
                 Spacer()
-                Text(profile.avatarEmoji)
-                    .font(.system(size: 44))
-                    .padding(8)
+                Image(systemName: profile.avatarEmoji)
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white)
+                    .padding(12)
                     .background(.white.opacity(0.08))
                     .clipShape(Circle())
             }

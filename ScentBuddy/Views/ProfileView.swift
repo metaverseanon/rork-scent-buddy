@@ -86,8 +86,20 @@ struct ProfileView: View {
 
     private func loggedInContent(profile: UserProfile) -> some View {
         VStack(spacing: 20) {
-            Text(profile.avatarEmoji)
-                .font(.system(size: 48))
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.purple.opacity(0.25), .pink.opacity(0.15)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 80, height: 80)
+                Image(systemName: profile.avatarEmoji)
+                    .font(.system(size: 32))
+                    .foregroundStyle(.primary)
+            }
 
             VStack(spacing: 4) {
                 Text(profile.displayName)

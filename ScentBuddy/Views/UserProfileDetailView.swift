@@ -41,8 +41,9 @@ struct UserProfileDetailView: View {
                 Circle()
                     .fill(avatarGradient)
                     .frame(width: 80, height: 80)
-                Text(user.avatarEmoji)
-                    .font(.system(size: 36))
+                Image(systemName: user.avatarEmoji)
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white)
             }
 
             VStack(spacing: 4) {
@@ -177,7 +178,7 @@ struct UserProfileDetailView: View {
                 emptyState(icon: "text.bubble", title: "No Reviews", subtitle: "This user hasn't written any reviews yet.")
             } else {
                 ForEach(reviews) { review in
-                    ReviewCard(review: review, reviewerName: user.displayName, reviewerEmoji: user.avatarEmoji)
+                    ReviewCard(review: review, reviewerName: user.displayName, reviewerIcon: user.avatarEmoji)
                 }
             }
         }
@@ -342,7 +343,7 @@ struct WishlistItemCard: View {
 struct ReviewCard: View {
     let review: PerfumeReview
     var reviewerName: String = ""
-    var reviewerEmoji: String = ""
+    var reviewerIcon: String = ""
     var showPerfumeInfo: Bool = true
     var onLike: (() -> Void)?
     var isLiked: Bool = false
@@ -354,9 +355,10 @@ struct ReviewCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if showPerfumeInfo {
                 HStack(spacing: 10) {
-                    if !reviewerEmoji.isEmpty {
-                        Text(reviewerEmoji)
-                            .font(.title3)
+                    if !reviewerIcon.isEmpty {
+                        Image(systemName: reviewerIcon)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         if !reviewerName.isEmpty {

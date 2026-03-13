@@ -34,7 +34,7 @@ struct PerfumeReviewsView: View {
                         ReviewCard(
                             review: review,
                             reviewerName: profile?.display_name ?? "User",
-                            reviewerEmoji: profile?.avatar_emoji ?? "🌸",
+                            reviewerIcon: profile?.avatar_emoji ?? "drop.fill",
                             showPerfumeInfo: false,
                             onLike: { Task { await toggleLike(review) } },
                             isLiked: likedReviewIds.contains(review.id),
