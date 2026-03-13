@@ -73,7 +73,7 @@ struct UserProfileDetailView: View {
                 .frame(width: 140)
                 .padding(.vertical, 10)
                 .background(socialService.isFollowing(user.id) ? theme.chipColor : Color.accentColor)
-                .foregroundStyle(socialService.isFollowing(user.id) ? .primary : .white)
+                .foregroundStyle(socialService.isFollowing(user.id) ? Color.primary : Color.white)
                 .clipShape(Capsule())
             }
         }
