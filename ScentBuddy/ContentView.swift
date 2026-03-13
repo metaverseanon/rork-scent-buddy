@@ -2,14 +2,31 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var onboardingManager = OnboardingManager.shared
+    @State private var showSplash: Bool = true
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
     var body: some View {
-        Group {
-            if onboardingManager.hasCompletedOnboarding {
-                mainTabView
-            } else {
-                OnboardingView()
+        ZStack {
+            Group {
+                if onboardingManager.hasCompletedOnboarding {
+                    mainTabView
+                } else {
+                    OnboardingView()
+                }
+            }
+            .opacity(showSplash ? 0 : 1)
+
+            if showSplash {
+                SplashScreenView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    showSplash = false
+                }
             }
         }
     }
