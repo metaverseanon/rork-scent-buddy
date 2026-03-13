@@ -16,6 +16,8 @@ struct CreateAccountView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var avatarImageData: Data?
     @State private var showingImageSourcePicker: Bool = false
+    @State private var showPassword: Bool = false
+    @State private var showConfirmPassword: Bool = false
     @State private var usernameService = UsernameService.shared
     @State private var profileManager = UserProfileManager.shared
 
@@ -68,7 +70,8 @@ struct CreateAccountView: View {
         let emailValid = email.contains("@") && email.contains(".")
         let passwordValid = password.count >= 6
         let passwordsMatch = password == confirmPassword
-        let usernameValid = username.trimmingCharacters(in: .whitespaces).count < 3 || usernameService.isAvailable == true
+        let trimmedUsername = username.trimmingCharacters(in: .whitespaces)
+        let usernameValid = trimmedUsername.count < 3 || (usernameService.isAvailable != false && !usernameService.isChecking)
         return nameValid && emailValid && passwordValid && passwordsMatch && usernameValid && !profileManager.isLoading
     }
 
@@ -255,11 +258,26 @@ struct CreateAccountView: View {
                 Image(systemName: "lock.fill")
                     .foregroundStyle(.secondary)
                     .font(.subheadline)
-                SecureField("At least 6 characters", text: $password)
-                    .textContentType(.newPassword)
-                    .focused($focusedField, equals: .password)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .confirmPassword }
+                Group {
+                    if showPassword {
+                        TextField("At least 6 characters", text: $password)
+                            .textContentType(.newPassword)
+                    } else {
+                        SecureField("At least 6 characters", text: $password)
+                            .textContentType(.newPassword)
+                    }
+                }
+                .focused($focusedField, equals: .password)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .confirmPassword }
+                Button {
+                    showPassword.toggle()
+                } label: {
+                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+                .buttonStyle(.plain)
             }
             .padding(12)
             .background(AppearanceManager.shared.theme.cardColor)
@@ -282,11 +300,26 @@ struct CreateAccountView: View {
                 Image(systemName: "lock.fill")
                     .foregroundStyle(.secondary)
                     .font(.subheadline)
-                SecureField("Repeat password", text: $confirmPassword)
-                    .textContentType(.newPassword)
-                    .focused($focusedField, equals: .confirmPassword)
-                    .submitLabel(.next)
-                    .onSubmit { focusedField = .username }
+                Group {
+                    if showConfirmPassword {
+                        TextField("Repeat password", text: $confirmPassword)
+                            .textContentType(.newPassword)
+                    } else {
+                        SecureField("Repeat password", text: $confirmPassword)
+                            .textContentType(.newPassword)
+                    }
+                }
+                .focused($focusedField, equals: .confirmPassword)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .username }
+                Button {
+                    showConfirmPassword.toggle()
+                } label: {
+                    Image(systemName: showConfirmPassword ? "eye.slash.fill" : "eye.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                }
+                .buttonStyle(.plain)
             }
             .padding(12)
             .background(AppearanceManager.shared.theme.cardColor)
