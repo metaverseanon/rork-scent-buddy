@@ -33,16 +33,12 @@ final class FragellaAPIService {
         !Self.apiKey.isEmpty
     }
 
-    private var lastQuery: String = ""
-
-    func search(query: String, limit: Int = 20) async {
+    func search(query: String, limit: Int = 10) async {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 3 else {
             searchResults = []
             return
         }
-
-        guard trimmed != lastQuery else { return }
 
         isSearching = true
         errorMessage = nil
@@ -83,8 +79,7 @@ final class FragellaAPIService {
                 }
 
                 let parsed = try parseFragrances(from: data)
-                lastQuery = trimmed
-                searchResults = parsed
+                searchResults = rankResults(parsed, query: trimmed)
                 return
             }
         } catch is CancellationError {
@@ -130,6 +125,30 @@ final class FragellaAPIService {
                 imageURL: imageURL,
                 year: year
             )
+        }
+    }
+
+    private func rankResults(_ results: [FragellaFragrance], query: String) -> [FragellaFragrance] {
+        let q = query.lowercased()
+        return results.sorted { a, b in
+            let aName = a.name.lowercased()
+            let bName = b.name.lowercased()
+            let aBrand = a.brand.lowercased()
+            let bBrand = b.brand.lowercased()
+
+            let aExact = aName == q || "\(aBrand) \(aName)".contains(q)
+            let bExact = bName == q || "\(bBrand) \(bName)".contains(q)
+            if aExact != bExact { return aExact }
+
+            let aPrefix = aName.hasPrefix(q) || aBrand.hasPrefix(q)
+            let bPrefix = bName.hasPrefix(q) || bBrand.hasPrefix(q)
+            if aPrefix != bPrefix { return aPrefix }
+
+            let aNameContains = aName.contains(q)
+            let bNameContains = bName.contains(q)
+            if aNameContains != bNameContains { return aNameContains }
+
+            return aName.count < bName.count
         }
     }
 

@@ -24,7 +24,7 @@ struct PerfumeSearchView: View {
                 searchTask?.cancel()
                 if newValue.count >= 3 && fragellaService.isConfigured {
                     searchTask = Task {
-                        try? await Task.sleep(for: .milliseconds(800))
+                        try? await Task.sleep(for: .milliseconds(500))
                         guard !Task.isCancelled else { return }
                         await fragellaService.search(query: newValue)
                     }
