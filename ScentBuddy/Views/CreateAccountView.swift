@@ -6,6 +6,8 @@ struct CreateAccountView: View {
 
     @State private var displayName: String = ""
     @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var confirmPassword: String = ""
     @State private var username: String = ""
     @State private var bio: String = ""
     @State private var favoriteNote: String = ""
@@ -15,13 +17,14 @@ struct CreateAccountView: View {
     @State private var avatarImageData: Data?
     @State private var showingImageSourcePicker: Bool = false
     @State private var usernameService = UsernameService.shared
+    @State private var profileManager = UserProfileManager.shared
 
     @FocusState private var focusedField: Field?
 
     private let emojiOptions = ["🧴", "💐", "🌸", "🌿", "🔥", "✨", "🖤", "💎", "🌙", "🍊", "🫧", "🪻"]
 
     nonisolated private enum Field: Hashable {
-        case displayName, email, username, bio, favoriteNote
+        case displayName, email, password, confirmPassword, username, bio, favoriteNote
     }
 
     nonisolated private enum AvatarMode {
@@ -44,20 +47,29 @@ struct CreateAccountView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .disabled(profileManager.isLoading)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { createProfile() }
-                        .fontWeight(.semibold)
-                        .disabled(!canSave)
+                    if profileManager.isLoading {
+                        ProgressView()
+                    } else {
+                        Button("Save") { createProfile() }
+                            .fontWeight(.semibold)
+                            .disabled(!canSave)
+                    }
                 }
             }
+            .interactiveDismissDisabled(profileManager.isLoading)
         }
     }
 
     private var canSave: Bool {
         let nameValid = !displayName.trimmingCharacters(in: .whitespaces).isEmpty
+        let emailValid = email.contains("@") && email.contains(".")
+        let passwordValid = password.count >= 6
+        let passwordsMatch = password == confirmPassword
         let usernameValid = username.trimmingCharacters(in: .whitespaces).count < 3 || usernameService.isAvailable == true
-        return nameValid && usernameValid
+        return nameValid && emailValid && passwordValid && passwordsMatch && usernameValid && !profileManager.isLoading
     }
 
     private var avatarSection: some View {
@@ -166,6 +178,20 @@ struct CreateAccountView: View {
 
     private var formSection: some View {
         VStack(spacing: 20) {
+            if let error = profileManager.errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.08))
+                .clipShape(.rect(cornerRadius: 10))
+            }
+
             VStack(alignment: .leading, spacing: 6) {
                 Text("Display Name")
                     .font(.subheadline.bold())
@@ -193,11 +219,61 @@ struct CreateAccountView: View {
                         .autocorrectionDisabled()
                         .focused($focusedField, equals: .email)
                         .submitLabel(.next)
+                        .onSubmit { focusedField = .password }
+                }
+                .padding(12)
+                .background(AppearanceManager.shared.theme.cardColor)
+                .clipShape(.rect(cornerRadius: 12))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Password")
+                    .font(.subheadline.bold())
+                HStack(spacing: 10) {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                    SecureField("At least 6 characters", text: $password)
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .confirmPassword }
+                }
+                .padding(12)
+                .background(AppearanceManager.shared.theme.cardColor)
+                .clipShape(.rect(cornerRadius: 12))
+
+                if !password.isEmpty && password.count < 6 {
+                    Text("Password must be at least 6 characters")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.leading, 4)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Confirm Password")
+                    .font(.subheadline.bold())
+                HStack(spacing: 10) {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                    SecureField("Repeat password", text: $confirmPassword)
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .confirmPassword)
+                        .submitLabel(.next)
                         .onSubmit { focusedField = .username }
                 }
                 .padding(12)
                 .background(AppearanceManager.shared.theme.cardColor)
                 .clipShape(.rect(cornerRadius: 12))
+
+                if !confirmPassword.isEmpty && password != confirmPassword {
+                    Text("Passwords don't match")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.leading, 4)
+                }
             }
 
             Divider()
@@ -296,26 +372,34 @@ struct CreateAccountView: View {
     }
 
     private func createProfile() {
+        focusedField = nil
         let trimmedUsername = username.trimmingCharacters(in: .whitespaces).lowercased()
-        if trimmedUsername.count >= 3 {
-            Task {
-                _ = await usernameService.registerUsername(trimmedUsername)
-            }
-        }
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces).lowercased()
+        let trimmedName = displayName.trimmingCharacters(in: .whitespaces)
+        let trimmedBio = bio.trimmingCharacters(in: .whitespaces)
+        let trimmedNote = favoriteNote.trimmingCharacters(in: .whitespaces)
 
         if let data = avatarImageData {
             UserDefaults.standard.set(data, forKey: "user_avatar_image")
         }
 
-        UserProfileManager.shared.profile = UserProfile(
-            displayName: displayName.trimmingCharacters(in: .whitespaces),
-            username: trimmedUsername,
-            email: email.trimmingCharacters(in: .whitespaces).lowercased(),
-            bio: bio.trimmingCharacters(in: .whitespaces),
-            favoriteNote: favoriteNote.trimmingCharacters(in: .whitespaces),
-            memberSince: Date(),
-            avatarEmoji: selectedEmoji
-        )
-        dismiss()
+        Task {
+            let success = await profileManager.signUp(
+                email: trimmedEmail,
+                password: password,
+                displayName: trimmedName,
+                username: trimmedUsername,
+                bio: trimmedBio,
+                favoriteNote: trimmedNote,
+                avatarEmoji: selectedEmoji
+            )
+
+            if success {
+                if trimmedUsername.count >= 3 {
+                    _ = await usernameService.registerUsername(trimmedUsername)
+                }
+                dismiss()
+            }
+        }
     }
 }
