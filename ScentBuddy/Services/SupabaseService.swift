@@ -75,11 +75,12 @@ final class SupabaseService {
 
     func signUp(email: String, password: String) async throws -> SupabaseUser {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured. Please check your environment variables.")
         }
 
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup") else {
-            throw SupabaseError.serverError("Invalid Supabase URL configuration")
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup"),
+              url.scheme?.hasPrefix("http") == true else {
+            throw SupabaseError.serverError("Invalid Supabase URL. Please check EXPO_PUBLIC_SUPABASE_URL.")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -89,7 +90,13 @@ final class SupabaseService {
         let body: [String: String] = ["email": email, "password": password]
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw SupabaseError.serverError("Could not connect to server. Please check your internet connection.")
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw SupabaseError.networkError
@@ -114,16 +121,17 @@ final class SupabaseService {
             return user
         }
 
-        throw SupabaseError.serverError("Unexpected response")
+        throw SupabaseError.serverError("Unexpected response from server")
     }
 
     func signIn(email: String, password: String) async throws -> SupabaseUser {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured. Please check your environment variables.")
         }
 
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else {
-            throw SupabaseError.serverError("Invalid Supabase URL configuration")
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password"),
+              url.scheme?.hasPrefix("http") == true else {
+            throw SupabaseError.serverError("Invalid Supabase URL. Please check EXPO_PUBLIC_SUPABASE_URL.")
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -133,7 +141,13 @@ final class SupabaseService {
         let body: [String: String] = ["email": email, "password": password]
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw SupabaseError.serverError("Could not connect to server. Please check your internet connection.")
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw SupabaseError.networkError
@@ -170,7 +184,7 @@ final class SupabaseService {
 
     func insertProfile(_ profile: SupabaseProfileInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured.")
         }
 
         guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles") else {
@@ -207,7 +221,7 @@ final class SupabaseService {
 
     func fetchProfile(userId: String) async throws -> SupabaseProfile? {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured.")
         }
 
         guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?id=eq.\(userId)&select=*") else {
@@ -236,7 +250,7 @@ final class SupabaseService {
 
     func fetchAllProfiles() async throws -> [SupabaseProfile] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured.")
         }
 
         guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?select=*&order=created_at.desc") else {
@@ -264,7 +278,7 @@ final class SupabaseService {
 
     func fetchFollowing(userId: String) async throws -> [SupabaseFollow] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured.")
         }
 
         guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(userId)&select=*") else {
@@ -292,7 +306,7 @@ final class SupabaseService {
 
     func followUser(followerId: String, followingId: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured.")
         }
 
         guard let url = URL(string: "\(supabaseURL)/rest/v1/follows") else {
@@ -326,7 +340,7 @@ final class SupabaseService {
 
     func unfollowUser(followerId: String, followingId: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
-            throw SupabaseError.notConfigured
+            throw SupabaseError.serverError("Supabase is not configured.")
         }
 
         guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(followerId)&following_id=eq.\(followingId)") else {
@@ -383,7 +397,7 @@ final class SupabaseService {
     }
 
     func fetchUserCollection(userId: String) async throws -> [UserCollectionItem] {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/user_collections?user_id=eq.\(userId)&select=*&order=date_added.desc") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -394,7 +408,7 @@ final class SupabaseService {
     }
 
     func fetchUserWishlist(userId: String) async throws -> [UserWishlistItem] {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists?user_id=eq.\(userId)&select=*&order=date_added.desc") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -405,7 +419,7 @@ final class SupabaseService {
     }
 
     func insertCollectionItem(_ item: UserCollectionInsert) async throws {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/user_collections") else { throw SupabaseError.serverError("Invalid URL") }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(item)
@@ -419,7 +433,7 @@ final class SupabaseService {
     }
 
     func insertWishlistItem(_ item: UserWishlistInsert) async throws {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists") else { throw SupabaseError.serverError("Invalid URL") }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(item)
@@ -433,7 +447,7 @@ final class SupabaseService {
     }
 
     func fetchReviews(perfumeName: String, perfumeBrand: String) async throws -> [PerfumeReview] {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         let encodedName = perfumeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeName
         let encodedBrand = perfumeBrand.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeBrand
         guard let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)&select=*&order=created_at.desc") else { throw SupabaseError.serverError("Invalid URL") }
@@ -446,7 +460,7 @@ final class SupabaseService {
     }
 
     func fetchUserReviews(userId: String) async throws -> [PerfumeReview] {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?user_id=eq.\(userId)&select=*&order=created_at.desc") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -457,7 +471,7 @@ final class SupabaseService {
     }
 
     func insertReview(_ review: PerfumeReviewInsert) async throws {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews") else { throw SupabaseError.serverError("Invalid URL") }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(review)
@@ -481,7 +495,7 @@ final class SupabaseService {
     }
 
     func toggleReviewLike(userId: String, reviewId: String, isLiked: Bool) async throws {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         if isLiked {
             guard let url = URL(string: "\(supabaseURL)/rest/v1/review_likes?user_id=eq.\(userId)&review_id=eq.\(reviewId)") else { throw SupabaseError.serverError("Invalid URL") }
             let request = authenticatedRequest(url: url, method: "DELETE")
@@ -521,7 +535,7 @@ final class SupabaseService {
     }
 
     func fetchFollowers(userId: String) async throws -> [SupabaseFollow] {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?following_id=eq.\(userId)&select=*") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -545,13 +559,11 @@ nonisolated struct SupabaseFollow: Codable, Sendable {
 }
 
 nonisolated enum SupabaseError: LocalizedError, Sendable {
-    case notConfigured
     case networkError
     case serverError(String)
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured: return "Supabase is not configured"
         case .networkError: return "Network error. Please try again."
         case .serverError(let msg): return msg
         }
