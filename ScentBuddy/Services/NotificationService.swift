@@ -113,6 +113,22 @@ final class NotificationService {
         }
     }
 
+    func sendTestNotification() async {
+        if !isAuthorized {
+            let granted = await requestAuthorization()
+            guard granted else { return }
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "ScentBuddy"
+        content.body = "Notifications are working! You're all set."
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
+        let request = UNNotificationRequest(identifier: "test_notification", content: content, trigger: trigger)
+        try? await center.add(request)
+    }
+
     private func wearReminderBody() -> String {
         let bodies = [
             "Log your fragrance and keep your scent diary up to date.",

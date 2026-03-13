@@ -4,6 +4,7 @@ struct SettingsView: View {
     private var currentTheme: AppTheme { AppearanceManager.shared.theme }
     @State private var showingNotePreferences: Bool = false
     @State private var notificationService = NotificationService.shared
+    @State private var testNotificationSent: Bool = false
 
     var body: some View {
         Form {
@@ -53,6 +54,32 @@ struct SettingsView: View {
                             Text("Saturday suggestions")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    Task {
+                        await notificationService.sendTestNotification()
+                        testNotificationSent = true
+                        try? await Task.sleep(for: .seconds(3))
+                        testNotificationSent = false
+                    }
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(.green.gradient, in: .rect(cornerRadius: 8))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Test Push Notification")
+                                .foregroundStyle(.primary)
+                            Text(testNotificationSent ? "Notification sent! Check in 3 seconds." : "Send a test notification to this device")
+                                .font(.caption)
+                                .foregroundStyle(testNotificationSent ? .green : .secondary)
                         }
                     }
                 }
