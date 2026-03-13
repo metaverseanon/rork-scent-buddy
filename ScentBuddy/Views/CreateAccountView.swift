@@ -144,7 +144,7 @@ struct CreateAccountView: View {
                 } label: {
                     Image(systemName: icon)
                         .font(.body)
-                        .foregroundStyle(selectedEmoji == icon ? .tint : .secondary)
+                        .foregroundStyle(selectedEmoji == icon ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                         .frame(width: 44, height: 44)
                         .background(
                             selectedEmoji == icon

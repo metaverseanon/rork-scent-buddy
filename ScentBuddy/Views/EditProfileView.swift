@@ -81,7 +81,7 @@ struct EditProfileView: View {
                     } label: {
                         Image(systemName: icon)
                             .font(.callout)
-                            .foregroundStyle(selectedEmoji == icon ? .tint : .secondary)
+                            .foregroundStyle(selectedEmoji == icon ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                             .frame(width: 36, height: 36)
                             .background(
                                 selectedEmoji == icon
