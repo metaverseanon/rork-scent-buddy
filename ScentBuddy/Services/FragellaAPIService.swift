@@ -33,12 +33,16 @@ final class FragellaAPIService {
         !Self.apiKey.isEmpty
     }
 
+    private var lastQuery: String = ""
+
     func search(query: String, limit: Int = 20) async {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 3 else {
             searchResults = []
             return
         }
+
+        guard trimmed != lastQuery else { return }
 
         isSearching = true
         errorMessage = nil
@@ -60,16 +64,31 @@ final class FragellaAPIService {
             request.setValue(Self.apiKey, forHTTPHeaderField: "x-api-key")
             request.timeoutInterval = 10
 
-            let (data, response) = try await URLSession.shared.data(for: request)
+            var retries = 0
+            let maxRetries = 2
 
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            while true {
+                let (data, response) = try await URLSession.shared.data(for: request)
                 let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                errorMessage = "API error (status \(statusCode))"
+
+                if statusCode == 429 && retries < maxRetries {
+                    retries += 1
+                    try await Task.sleep(for: .seconds(Double(retries) * 1.5))
+                    continue
+                }
+
+                guard statusCode == 200 else {
+                    errorMessage = statusCode == 429 ? "Rate limited — please wait a moment" : "API error (status \(statusCode))"
+                    return
+                }
+
+                let parsed = try parseFragrances(from: data)
+                lastQuery = trimmed
+                searchResults = parsed
                 return
             }
-
-            let parsed = try parseFragrances(from: data)
-            searchResults = parsed
+        } catch is CancellationError {
+            return
         } catch {
             errorMessage = error.localizedDescription
         }
