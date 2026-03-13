@@ -59,8 +59,10 @@ final class SupabaseService {
     private let userIdKey = "supabase_user_id"
 
     private init() {
-        self.supabaseURL = Config.EXPO_PUBLIC_SUPABASE_URL
-        self.supabaseKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY
+        var rawURL = Config.EXPO_PUBLIC_SUPABASE_URL.trimmingCharacters(in: .whitespacesAndNewlines)
+        if rawURL.hasSuffix("/") { rawURL = String(rawURL.dropLast()) }
+        self.supabaseURL = rawURL
+        self.supabaseKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let token = UserDefaults.standard.string(forKey: tokenKey),
            let userId = UserDefaults.standard.string(forKey: userIdKey),
@@ -76,7 +78,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/auth/v1/signup")!
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup") else {
+            throw SupabaseError.serverError("Invalid Supabase URL configuration")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -118,7 +122,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password")!
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else {
+            throw SupabaseError.serverError("Invalid Supabase URL configuration")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -152,8 +158,8 @@ final class SupabaseService {
     }
 
     func signOut() async {
-        if let token = accessToken, !supabaseURL.isEmpty {
-            var request = URLRequest(url: URL(string: "\(supabaseURL)/auth/v1/logout")!)
+        if let token = accessToken, !supabaseURL.isEmpty, let logoutURL = URL(string: "\(supabaseURL)/auth/v1/logout") {
+            var request = URLRequest(url: logoutURL)
             request.httpMethod = "POST"
             request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -167,7 +173,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/rest/v1/profiles")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles") else {
+            throw SupabaseError.serverError("Invalid Supabase URL configuration")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -202,7 +210,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/rest/v1/profiles?id=eq.\(userId)&select=*")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?id=eq.\(userId)&select=*") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -229,7 +239,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/rest/v1/profiles?select=*&order=created_at.desc")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?select=*&order=created_at.desc") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -255,7 +267,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(userId)&select=*")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(userId)&select=*") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -281,7 +295,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/rest/v1/follows")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/follows") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -313,7 +329,9 @@ final class SupabaseService {
             throw SupabaseError.notConfigured
         }
 
-        let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(followerId)&following_id=eq.\(followingId)")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(followerId)&following_id=eq.\(followingId)") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -366,7 +384,7 @@ final class SupabaseService {
 
     func fetchUserCollection(userId: String) async throws -> [UserCollectionItem] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
-        let url = URL(string: "\(supabaseURL)/rest/v1/user_collections?user_id=eq.\(userId)&select=*&order=date_added.desc")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/user_collections?user_id=eq.\(userId)&select=*&order=date_added.desc") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
@@ -377,7 +395,7 @@ final class SupabaseService {
 
     func fetchUserWishlist(userId: String) async throws -> [UserWishlistItem] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
-        let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists?user_id=eq.\(userId)&select=*&order=date_added.desc")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists?user_id=eq.\(userId)&select=*&order=date_added.desc") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
@@ -388,7 +406,7 @@ final class SupabaseService {
 
     func insertCollectionItem(_ item: UserCollectionInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
-        let url = URL(string: "\(supabaseURL)/rest/v1/user_collections")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/user_collections") else { throw SupabaseError.serverError("Invalid URL") }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(item)
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -402,7 +420,7 @@ final class SupabaseService {
 
     func insertWishlistItem(_ item: UserWishlistInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
-        let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/user_wishlists") else { throw SupabaseError.serverError("Invalid URL") }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(item)
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -418,7 +436,7 @@ final class SupabaseService {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
         let encodedName = perfumeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeName
         let encodedBrand = perfumeBrand.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeBrand
-        let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)&select=*&order=created_at.desc")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)&select=*&order=created_at.desc") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
@@ -429,7 +447,7 @@ final class SupabaseService {
 
     func fetchUserReviews(userId: String) async throws -> [PerfumeReview] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
-        let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?user_id=eq.\(userId)&select=*&order=created_at.desc")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews?user_id=eq.\(userId)&select=*&order=created_at.desc") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
@@ -440,7 +458,7 @@ final class SupabaseService {
 
     func insertReview(_ review: PerfumeReviewInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
-        let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews") else { throw SupabaseError.serverError("Invalid URL") }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(review)
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -455,7 +473,7 @@ final class SupabaseService {
     func fetchReviewLikes(reviewIds: [String]) async throws -> [ReviewLike] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, !reviewIds.isEmpty else { return [] }
         let ids = reviewIds.joined(separator: ",")
-        let url = URL(string: "\(supabaseURL)/rest/v1/review_likes?review_id=in.(\(ids))&select=*")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/review_likes?review_id=in.(\(ids))&select=*") else { return [] }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
@@ -465,14 +483,14 @@ final class SupabaseService {
     func toggleReviewLike(userId: String, reviewId: String, isLiked: Bool) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
         if isLiked {
-            let url = URL(string: "\(supabaseURL)/rest/v1/review_likes?user_id=eq.\(userId)&review_id=eq.\(reviewId)")!
+            guard let url = URL(string: "\(supabaseURL)/rest/v1/review_likes?user_id=eq.\(userId)&review_id=eq.\(reviewId)") else { throw SupabaseError.serverError("Invalid URL") }
             let request = authenticatedRequest(url: url, method: "DELETE")
             let (_, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
                 throw SupabaseError.serverError("Failed to unlike review")
             }
         } else {
-            let url = URL(string: "\(supabaseURL)/rest/v1/review_likes")!
+            guard let url = URL(string: "\(supabaseURL)/rest/v1/review_likes") else { throw SupabaseError.serverError("Invalid URL") }
             var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
             request.httpBody = try JSONEncoder().encode(ReviewLikeInsert(user_id: userId, review_id: reviewId))
             let (_, response) = try await URLSession.shared.data(for: request)
@@ -485,7 +503,7 @@ final class SupabaseService {
     func fetchActivityFeed(userIds: [String]) async throws -> [ActivityFeedItem] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, !userIds.isEmpty else { return [] }
         let ids = userIds.joined(separator: ",")
-        let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed?user_id=in.(\(ids))&select=*&order=created_at.desc&limit=50")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed?user_id=in.(\(ids))&select=*&order=created_at.desc&limit=50") else { return [] }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
@@ -496,7 +514,7 @@ final class SupabaseService {
 
     func insertActivity(_ activity: ActivityFeedInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
-        let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed") else { return }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(activity)
         _ = try? await URLSession.shared.data(for: request)
@@ -504,7 +522,7 @@ final class SupabaseService {
 
     func fetchFollowers(userId: String) async throws -> [SupabaseFollow] {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.notConfigured }
-        let url = URL(string: "\(supabaseURL)/rest/v1/follows?following_id=eq.\(userId)&select=*")!
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?following_id=eq.\(userId)&select=*") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
