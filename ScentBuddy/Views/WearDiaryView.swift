@@ -45,6 +45,13 @@ struct WearDiaryView: View {
         }
         .background(AppearanceManager.shared.theme.backgroundColor)
         .navigationTitle("Wear Diary")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Wear Diary")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+            }
+        }
         .sheet(isPresented: $showingLogWear) {
             LogWearView()
         }

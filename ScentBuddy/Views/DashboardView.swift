@@ -35,8 +35,7 @@ struct DashboardView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("ScentBuddy")
-                    .font(.headline)
-                    .fontWeight(.bold)
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
             }
         }
         .task {

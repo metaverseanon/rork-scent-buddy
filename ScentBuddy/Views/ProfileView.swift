@@ -16,6 +16,13 @@ struct ProfileView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Profile")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+            }
+        }
         .sheet(isPresented: $showingCreateAccount) {
             CreateAccountView()
         }

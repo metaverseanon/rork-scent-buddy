@@ -28,6 +28,13 @@ struct CollectionView: View {
         }
         .background(AppearanceManager.shared.theme.backgroundColor)
         .navigationTitle("My Collection")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("My Collection")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+            }
+        }
         .searchable(text: $viewModel.searchText, prompt: "Search perfumes...")
         .sheet(isPresented: $viewModel.showingAddPerfume) {
             AddPerfumeView()

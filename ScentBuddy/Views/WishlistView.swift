@@ -42,6 +42,13 @@ struct WishlistView: View {
         }
         .background(AppearanceManager.shared.theme.backgroundColor)
         .navigationTitle("Wishlist")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Wishlist")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+            }
+        }
         .sheet(isPresented: $showingAddSheet) {
             AddWishlistView()
         }
