@@ -41,6 +41,13 @@ struct DashboardView: View {
         }
         .task {
             scentOfTheDay = scentService.suggest(from: perfumes, wearEntries: wearEntries)
+            WidgetDataService.updateWidgetData(
+                collectionCount: perfumes.count,
+                wearCount: wearEntries.count,
+                wishlistCount: wishlist.count,
+                scentOfTheDay: scentOfTheDay?.perfumeName,
+                scentOfTheDayBrand: scentOfTheDay?.perfumeBrand
+            )
         }
     }
 
@@ -165,6 +172,20 @@ struct DashboardView: View {
                 title: "Stats",
                 subtitle: "Your data",
                 gradient: [.teal, .green]
+            )
+            FeatureTile(
+                destination: SocialView(),
+                icon: "person.2.fill",
+                title: "Community",
+                subtitle: "Follow others",
+                gradient: [.purple, .pink]
+            )
+            FeatureTile(
+                destination: CollectionCardView(),
+                icon: "rectangle.portrait.on.rectangle.portrait.angled.fill",
+                title: "Share Card",
+                subtitle: "Show off",
+                gradient: [.indigo, .purple]
             )
         }
     }

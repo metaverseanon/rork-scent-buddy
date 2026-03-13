@@ -1,8 +1,11 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct ScentBuddyApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Perfume.self,
@@ -35,5 +38,27 @@ struct ScentBuddyApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+    }
+}
+
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        let notifService = NotificationService.shared
+        if notifService.dailyReminderEnabled {
+            notifService.scheduleDailyReminder()
+        }
+        if notifService.weeklyPicksEnabled {
+            notifService.scheduleWeeklySmartPicks()
+        }
+        return true
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .badge, .sound])
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        completionHandler()
     }
 }

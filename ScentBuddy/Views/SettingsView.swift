@@ -3,9 +3,61 @@ import SwiftUI
 struct SettingsView: View {
     private var currentTheme: AppTheme { AppearanceManager.shared.theme }
     @State private var showingNotePreferences: Bool = false
+    @State private var notificationService = NotificationService.shared
 
     var body: some View {
         Form {
+            Section("Notifications") {
+                Toggle(isOn: Binding(
+                    get: { notificationService.dailyReminderEnabled },
+                    set: { newValue in Task { await notificationService.toggleDailyReminder(newValue) } }
+                )) {
+                    HStack(spacing: 14) {
+                        Image(systemName: "bell.badge.fill")
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(.blue.gradient, in: .rect(cornerRadius: 8))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Daily Wear Reminder")
+                                .foregroundStyle(.primary)
+                            Text("Remind me at \(notificationService.dailyReminderHour > 12 ? notificationService.dailyReminderHour - 12 : notificationService.dailyReminderHour) \(notificationService.dailyReminderHour >= 12 ? "PM" : "AM")")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if notificationService.dailyReminderEnabled {
+                    Picker("Reminder Time", selection: $notificationService.dailyReminderHour) {
+                        ForEach(6..<23) { hour in
+                            Text("\(hour > 12 ? hour - 12 : hour) \(hour >= 12 ? "PM" : "AM")")
+                                .tag(hour)
+                        }
+                    }
+                }
+
+                Toggle(isOn: Binding(
+                    get: { notificationService.weeklyPicksEnabled },
+                    set: { newValue in Task { await notificationService.toggleWeeklyPicks(newValue) } }
+                )) {
+                    HStack(spacing: 14) {
+                        Image(systemName: "sparkles")
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(.orange.gradient, in: .rect(cornerRadius: 8))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Weekly Smart Picks")
+                                .foregroundStyle(.primary)
+                            Text("Saturday suggestions")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
             Section("Preferences") {
                 Button {
                     showingNotePreferences = true
@@ -85,6 +137,25 @@ struct SettingsView: View {
                     Spacer()
                     Text("1.0.0")
                         .foregroundStyle(.secondary)
+                }
+            }
+
+            if !notificationService.isAuthorized {
+                Section {
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "bell.slash.fill")
+                                .foregroundStyle(.orange)
+                            Text("Enable Notifications in Settings")
+                                .font(.subheadline)
+                        }
+                    }
+                } footer: {
+                    Text("Notifications are disabled. Enable them in Settings to receive reminders.")
                 }
             }
         }
