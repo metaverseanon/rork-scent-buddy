@@ -61,6 +61,9 @@ final class SupabaseService {
     private init() {
         var rawURL = Config.EXPO_PUBLIC_SUPABASE_URL.trimmingCharacters(in: .whitespacesAndNewlines)
         if rawURL.hasSuffix("/") { rawURL = String(rawURL.dropLast()) }
+        if !rawURL.isEmpty && !rawURL.hasPrefix("http://") && !rawURL.hasPrefix("https://") {
+            rawURL = "https://" + rawURL
+        }
         self.supabaseURL = rawURL
         self.supabaseKey = Config.EXPO_PUBLIC_SUPABASE_ANON_KEY.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -78,8 +81,7 @@ final class SupabaseService {
             throw SupabaseError.serverError("Supabase is not configured. Please check your environment variables.")
         }
 
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup"),
-              url.scheme?.hasPrefix("http") == true else {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/signup") else {
             throw SupabaseError.serverError("Invalid Supabase URL. Please check EXPO_PUBLIC_SUPABASE_URL.")
         }
         var request = URLRequest(url: url)
@@ -129,8 +131,7 @@ final class SupabaseService {
             throw SupabaseError.serverError("Supabase is not configured. Please check your environment variables.")
         }
 
-        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password"),
-              url.scheme?.hasPrefix("http") == true else {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=password") else {
             throw SupabaseError.serverError("Invalid Supabase URL. Please check EXPO_PUBLIC_SUPABASE_URL.")
         }
         var request = URLRequest(url: url)
