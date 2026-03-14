@@ -44,6 +44,7 @@ struct EditPerfumeView: View {
                                         .font(.title2)
                                         .foregroundStyle(star <= perfume.rating ? Color.orange : Color.gray.opacity(0.3))
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
                     }

@@ -105,6 +105,7 @@ struct AddPerfumeView: View {
                                         .font(.title2)
                                         .foregroundStyle(star <= rating ? Color.orange : Color.gray.opacity(0.3))
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
                     }

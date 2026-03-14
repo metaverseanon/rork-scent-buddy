@@ -38,6 +38,7 @@ struct WriteReviewView: View {
                                     .font(.title)
                                     .foregroundStyle(star <= rating ? .orange : .gray.opacity(0.3))
                             }
+                            .buttonStyle(.plain)
                         }
                         Spacer()
                     }
