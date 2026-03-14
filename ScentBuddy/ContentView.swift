@@ -5,13 +5,6 @@ struct ContentView: View {
     @State private var showSplash: Bool = true
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
-    init() {
-        let tabBarAppearance = UITabBarAppearance()
-        tabBarAppearance.configureWithDefaultBackground()
-        UITabBar.appearance().standardAppearance = tabBarAppearance
-        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
-    }
-
     var body: some View {
         ZStack {
             Group {
