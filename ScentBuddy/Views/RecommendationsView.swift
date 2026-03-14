@@ -86,7 +86,10 @@ struct RecommendationsView: View {
     private func loadRecommendations() async {
         isLoading = true
         try? await Task.sleep(for: .milliseconds(500))
-        recommendations = service.generateRecommendations(from: perfumes, wearEntries: wearEntries)
+        let allRecs = service.generateRecommendations(from: perfumes, wearEntries: wearEntries)
+        recommendations = allRecs.filter { rec in
+            !perfumes.contains { $0.name.lowercased() == rec.name.lowercased() && $0.brand.lowercased() == rec.brand.lowercased() }
+        }
         isLoading = false
     }
 }
