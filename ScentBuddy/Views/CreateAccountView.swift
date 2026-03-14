@@ -196,7 +196,19 @@ struct CreateAccountView: View {
 
     private var errorBanner: some View {
         Group {
-            if let error = profileManager.errorMessage {
+            if let success = profileManager.successMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(success)
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.green.opacity(0.08))
+                .clipShape(.rect(cornerRadius: 10))
+            } else if let error = profileManager.errorMessage {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)

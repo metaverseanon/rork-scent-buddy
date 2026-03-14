@@ -14,6 +14,7 @@ final class UserProfileManager {
 
     var isLoading: Bool = false
     var errorMessage: String?
+    var successMessage: String?
 
     private let key = "user_profile"
 
@@ -43,9 +44,16 @@ final class UserProfileManager {
     ) async -> Bool {
         isLoading = true
         errorMessage = nil
+        successMessage = nil
 
         do {
             let user = try await SupabaseService.shared.signUp(email: email, password: password)
+
+            guard SupabaseService.shared.isAuthenticated else {
+                successMessage = "Check your email to confirm your account, then sign in."
+                isLoading = false
+                return false
+            }
 
             let profileInsert = SupabaseProfileInsert(
                 id: user.id,
