@@ -8,8 +8,12 @@ struct UserProfileDetailView: View {
     @State private var reviews: [PerfumeReview] = []
     @State private var followerCount: Int = 0
     @State private var followingCount: Int = 0
+    @State private var totalBumps: Int = 0
     @State private var selectedTab: ProfileTab = .collection
     @State private var isLoading: Bool = true
+    @State private var bumpedItems: Set<String> = []
+    @State private var bumpCounts: [String: Int] = [:]
+    @State private var bumpAnimatingItem: String?
 
     private var theme: AppTheme { AppearanceManager.shared.theme }
     private let supabase = SupabaseService.shared
@@ -62,20 +66,23 @@ struct UserProfileDetailView: View {
                     .padding(.horizontal, 32)
             }
 
-            Button {
-                Task { await socialService.toggleFollow(user.id) }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: socialService.isFollowing(user.id) ? "checkmark" : "plus")
-                        .font(.caption.bold())
-                    Text(socialService.isFollowing(user.id) ? "Following" : "Follow")
-                        .font(.subheadline.bold())
+            HStack(spacing: 12) {
+                Button {
+                    Task { await socialService.toggleFollow(user.id) }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: socialService.isFollowing(user.id) ? "checkmark" : "plus")
+                            .font(.caption.bold())
+                        Text(socialService.isFollowing(user.id) ? "Following" : "Follow")
+                            .font(.subheadline.bold())
+                    }
+                    .frame(width: 130)
+                    .padding(.vertical, 10)
+                    .background(socialService.isFollowing(user.id) ? theme.chipColor : Color.accentColor)
+                    .foregroundStyle(socialService.isFollowing(user.id) ? Color.primary : Color.white)
+                    .clipShape(Capsule())
                 }
-                .frame(width: 140)
-                .padding(.vertical, 10)
-                .background(socialService.isFollowing(user.id) ? theme.chipColor : Color.accentColor)
-                .foregroundStyle(socialService.isFollowing(user.id) ? Color.primary : Color.white)
-                .clipShape(Capsule())
+                .sensoryFeedback(.impact(weight: .medium), trigger: socialService.isFollowing(user.id))
             }
         }
         .padding(.vertical, 24)
@@ -89,6 +96,8 @@ struct UserProfileDetailView: View {
             statItem(value: "\(followerCount)", label: "Followers")
             Divider().frame(height: 32)
             statItem(value: "\(followingCount)", label: "Following")
+            Divider().frame(height: 32)
+            statItem(value: "\(totalBumps)", label: "👃 Bumps", highlight: true)
         }
         .padding(.vertical, 14)
         .background(theme.cardColor)
@@ -96,10 +105,11 @@ struct UserProfileDetailView: View {
         .padding(.horizontal)
     }
 
-    private func statItem(value: String, label: String) -> some View {
+    private func statItem(value: String, label: String, highlight: Bool = false) -> some View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.headline)
+                .foregroundStyle(highlight ? .orange : .primary)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -152,7 +162,14 @@ struct UserProfileDetailView: View {
                 emptyState(icon: "drop", title: "No Fragrances", subtitle: "This user hasn't added any fragrances yet.")
             } else {
                 ForEach(collection) { item in
-                    CollectionItemCard(item: item)
+                    BumpableCollectionCard(
+                        item: item,
+                        isBumped: bumpedItems.contains(item.id),
+                        bumpCount: bumpCounts[item.id] ?? 0,
+                        isAnimating: bumpAnimatingItem == item.id
+                    ) {
+                        Task { await toggleBump(item: item) }
+                    }
                 }
             }
         }
@@ -200,6 +217,66 @@ struct UserProfileDetailView: View {
         .frame(maxWidth: .infinity, minHeight: 200)
     }
 
+    private func toggleBump(item: UserCollectionItem) async {
+        guard let currentUserId = supabase.currentUserId, currentUserId != user.id else { return }
+
+        let wasBumped = bumpedItems.contains(item.id)
+
+        withAnimation(.spring(duration: 0.4, bounce: 0.5)) {
+            if wasBumped {
+                bumpedItems.remove(item.id)
+                bumpCounts[item.id] = max(0, (bumpCounts[item.id] ?? 1) - 1)
+                totalBumps = max(0, totalBumps - 1)
+            } else {
+                bumpedItems.insert(item.id)
+                bumpCounts[item.id] = (bumpCounts[item.id] ?? 0) + 1
+                totalBumps += 1
+                bumpAnimatingItem = item.id
+            }
+        }
+
+        if !wasBumped {
+            try? await Task.sleep(for: .seconds(0.6))
+            withAnimation { bumpAnimatingItem = nil }
+        }
+
+        do {
+            if wasBumped {
+                try await supabase.removeNoseBump(userId: currentUserId, collectionItemId: item.id)
+            } else {
+                let bump = NoseBumpInsert(
+                    user_id: currentUserId,
+                    target_user_id: user.id,
+                    collection_item_id: item.id,
+                    perfume_name: item.perfume_name,
+                    perfume_brand: item.perfume_brand
+                )
+                try await supabase.sendNoseBump(bump)
+
+                let notification = AppNotificationInsert(
+                    user_id: user.id,
+                    from_user_id: currentUserId,
+                    notification_type: "nose_bump",
+                    perfume_name: item.perfume_name,
+                    perfume_brand: item.perfume_brand
+                )
+                try await supabase.insertNotification(notification)
+            }
+        } catch {
+            withAnimation {
+                if wasBumped {
+                    bumpedItems.insert(item.id)
+                    bumpCounts[item.id] = (bumpCounts[item.id] ?? 0) + 1
+                    totalBumps += 1
+                } else {
+                    bumpedItems.remove(item.id)
+                    bumpCounts[item.id] = max(0, (bumpCounts[item.id] ?? 1) - 1)
+                    totalBumps = max(0, totalBumps - 1)
+                }
+            }
+        }
+    }
+
     private func loadData() async {
         isLoading = true
         defer { isLoading = false }
@@ -209,12 +286,29 @@ struct UserProfileDetailView: View {
         async let rev = supabase.fetchUserReviews(userId: user.id)
         async let followers = supabase.fetchFollowers(userId: user.id)
         async let following = supabase.fetchFollowing(userId: user.id)
+        async let bumps = supabase.fetchNoseBumpsForUser(targetUserId: user.id)
 
         collection = (try? await col) ?? []
         wishlist = (try? await wish) ?? []
         reviews = (try? await rev) ?? []
         followerCount = (try? await followers.count) ?? 0
         followingCount = (try? await following.count) ?? 0
+
+        let allBumps = (try? await bumps) ?? []
+        totalBumps = allBumps.count
+
+        var counts: [String: Int] = [:]
+        for bump in allBumps {
+            if let itemId = bump.collection_item_id {
+                counts[itemId, default: 0] += 1
+            }
+        }
+        bumpCounts = counts
+
+        if let currentUserId = supabase.currentUserId {
+            let myBumps = allBumps.filter { $0.user_id == currentUserId }
+            bumpedItems = Set(myBumps.compactMap { $0.collection_item_id })
+        }
     }
 
     private var avatarGradient: LinearGradient {
@@ -224,6 +318,95 @@ struct UserProfileDetailView: View {
             LinearGradient(colors: [.pink.opacity(0.3), .orange.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing),
             LinearGradient(colors: [.blue.opacity(0.3), .teal.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing),
             LinearGradient(colors: [.orange.opacity(0.3), .red.opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing),
+        ]
+        return gradients[hash % gradients.count]
+    }
+}
+
+struct BumpableCollectionCard: View {
+    let item: UserCollectionItem
+    let isBumped: Bool
+    let bumpCount: Int
+    let isAnimating: Bool
+    let onBump: () -> Void
+
+    private var theme: AppTheme { AppearanceManager.shared.theme }
+
+    var body: some View {
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(cardGradient)
+                .frame(width: 52, height: 52)
+                .overlay {
+                    Image(systemName: "drop.fill")
+                        .font(.body)
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.perfume_name)
+                    .font(.subheadline.bold())
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(item.perfume_brand)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    if bumpCount > 0 {
+                        HStack(spacing: 3) {
+                            Text("👃")
+                                .font(.caption2)
+                            Text("\(bumpCount)")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+            }
+
+            Spacer()
+
+            if let rating = item.rating, rating > 0 {
+                HStack(spacing: 2) {
+                    Image(systemName: "star.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                    Text("\(rating)")
+                        .font(.caption.bold())
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            if item.is_favorite == true {
+                Image(systemName: "heart.fill")
+                    .font(.caption)
+                    .foregroundStyle(.pink)
+            }
+
+            Button {
+                onBump()
+            } label: {
+                Image(systemName: "nose")
+                    .font(.title3)
+                    .foregroundStyle(isBumped ? .orange : .secondary)
+                    .scaleEffect(isAnimating ? 1.4 : 1.0)
+                    .rotationEffect(.degrees(isAnimating ? -15 : 0))
+                    .animation(.spring(duration: 0.4, bounce: 0.6), value: isAnimating)
+            }
+            .sensoryFeedback(.impact(weight: .medium, intensity: 0.8), trigger: isBumped) { _, newValue in newValue }
+        }
+        .padding(14)
+        .background(theme.cardColor)
+        .clipShape(.rect(cornerRadius: 14))
+    }
+
+    private var cardGradient: LinearGradient {
+        let hash = abs(item.perfume_name.hashValue)
+        let gradients: [LinearGradient] = [
+            LinearGradient(colors: [.purple.opacity(0.7), .indigo.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing),
+            LinearGradient(colors: [.pink.opacity(0.6), .orange.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
+            LinearGradient(colors: [.blue.opacity(0.6), .teal.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
+            LinearGradient(colors: [.orange.opacity(0.7), .red.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
         ]
         return gradients[hash % gradients.count]
     }

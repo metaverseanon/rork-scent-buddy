@@ -79,6 +79,13 @@ final class SocialService {
                     perfume_brand: nil,
                     target_user_id: userId
                 ))
+                try await supabase.insertNotification(AppNotificationInsert(
+                    user_id: userId,
+                    from_user_id: currentUserId,
+                    notification_type: "follow",
+                    perfume_name: nil,
+                    perfume_brand: nil
+                ))
             } catch {
                 followingIds.remove(userId)
                 followingUsers.removeAll { $0.id == userId }

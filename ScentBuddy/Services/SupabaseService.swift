@@ -785,6 +785,95 @@ final class SupabaseService {
         return try JSONDecoder().decode([SupabaseFollow].self, from: data)
     }
 
+    func sendNoseBump(_ bump: NoseBumpInsert) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs") else { throw SupabaseError.serverError("Invalid URL") }
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+        request.httpBody = try JSONEncoder().encode(bump)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.message ?? "Failed to send nose bump")
+            }
+            throw SupabaseError.serverError("Failed to send nose bump")
+        }
+    }
+
+    func fetchNoseBumps(collectionItemIds: [String]) async throws -> [NoseBump] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, !collectionItemIds.isEmpty else { return [] }
+        let ids = collectionItemIds.joined(separator: ",")
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?collection_item_id=in.(\(ids))&select=*") else { return [] }
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        return try JSONDecoder().decode([NoseBump].self, from: data)
+    }
+
+    func fetchNoseBumpsForUser(targetUserId: String) async throws -> [NoseBump] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return [] }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?target_user_id=eq.\(targetUserId)&select=*&order=created_at.desc") else { return [] }
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        return try JSONDecoder().decode([NoseBump].self, from: data)
+    }
+
+    func hasUserBumped(userId: String, collectionItemId: String) async throws -> Bool {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return false }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?user_id=eq.\(userId)&collection_item_id=eq.\(collectionItemId)&select=id&limit=1") else { return false }
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return false }
+        let items = try JSONDecoder().decode([NoseBump].self, from: data)
+        return !items.isEmpty
+    }
+
+    func removeNoseBump(userId: String, collectionItemId: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?user_id=eq.\(userId)&collection_item_id=eq.\(collectionItemId)") else { throw SupabaseError.serverError("Invalid URL") }
+        let request = authenticatedRequest(url: url, method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+            throw SupabaseError.serverError("Failed to remove nose bump")
+        }
+    }
+
+    func fetchNotifications(userId: String) async throws -> [AppNotification] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return [] }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=50") else { return [] }
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        return try JSONDecoder().decode([AppNotification].self, from: data)
+    }
+
+    func insertNotification(_ notification: AppNotificationInsert) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications") else { return }
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+        request.httpBody = try JSONEncoder().encode(notification)
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
+    func markNotificationsRead(userId: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false") else { return }
+        var request = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
+        let body: [String: Bool] = ["is_read": true]
+        request.httpBody = try JSONEncoder().encode(body)
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
+    func fetchUnreadNotificationCount(userId: String) async throws -> Int {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return 0 }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false&select=id") else { return 0 }
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return 0 }
+        let items = try JSONDecoder().decode([AppNotification].self, from: data)
+        return items.count
+    }
+
     func updateProfile(userId: String, update: SupabaseProfileUpdate) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             throw SupabaseError.serverError("Supabase is not configured.")
@@ -817,6 +906,16 @@ final class SupabaseService {
             }
             throw SupabaseError.serverError("Failed to update profile (\(http.statusCode))")
         }
+    }
+
+    func fetchNoseBumpCount(collectionItemId: String) async throws -> Int {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return 0 }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?collection_item_id=eq.\(collectionItemId)&select=id") else { return 0 }
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return 0 }
+        let items = try JSONDecoder().decode([NoseBump].self, from: data)
+        return items.count
     }
 }
 

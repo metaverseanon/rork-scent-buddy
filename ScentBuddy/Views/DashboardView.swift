@@ -7,6 +7,8 @@ struct DashboardView: View {
     @Query private var wishlist: [WishlistPerfume]
     @State private var scentOfTheDay: ScentOfTheDay?
     @State private var appearAnimated: Bool = false
+    @State private var notificationManager = NotificationManager.shared
+    @State private var showNotifications: Bool = false
     private let scentService = ScentOfTheDayService()
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
@@ -53,6 +55,19 @@ struct DashboardView: View {
                 Text("ScentBuddy")
                     .font(.system(size: 18, weight: .heavy, design: .rounded))
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showNotifications = true
+                } label: {
+                    Image(systemName: notificationManager.unreadCount > 0 ? "bell.badge.fill" : "bell.fill")
+                        .font(.body)
+                        .foregroundStyle(notificationManager.unreadCount > 0 ? .orange : .secondary)
+                        .symbolEffect(.bounce, value: notificationManager.unreadCount)
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showNotifications) {
+            NotificationsView()
         }
         .task {
             scentOfTheDay = scentService.suggest(from: perfumes, wearEntries: wearEntries)
@@ -67,6 +82,7 @@ struct DashboardView: View {
                 scentOfTheDayBrand: scentOfTheDay?.perfumeBrand
             )
             syncExistingCollectionToCloud()
+            await notificationManager.refreshUnreadCount()
         }
     }
 
