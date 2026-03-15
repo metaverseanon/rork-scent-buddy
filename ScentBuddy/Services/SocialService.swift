@@ -83,6 +83,7 @@ final class SocialService {
                     user_id: userId,
                     from_user_id: currentUserId,
                     notification_type: "follow",
+                    message: "started following you",
                     perfume_name: nil,
                     perfume_brand: nil
                 ))

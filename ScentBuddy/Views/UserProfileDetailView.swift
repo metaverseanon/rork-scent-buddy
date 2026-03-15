@@ -258,6 +258,7 @@ struct UserProfileDetailView: View {
                     user_id: user.id,
                     from_user_id: currentUserId,
                     notification_type: "nose_bump",
+                    message: "gave \(item.perfume_name) a nose bump",
                     perfume_name: item.perfume_name,
                     perfume_brand: item.perfume_brand
                 )

@@ -882,16 +882,16 @@ final class SupabaseService {
 
     func markNotificationsRead(userId: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false") else { return }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&read=eq.false") else { return }
         var request = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
-        let body: [String: Bool] = ["is_read": true]
+        let body: [String: Bool] = ["read": true]
         request.httpBody = try JSONEncoder().encode(body)
         _ = try? await URLSession.shared.data(for: request)
     }
 
     func fetchUnreadNotificationCount(userId: String) async throws -> Int {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return 0 }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false&select=id") else { return 0 }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&read=eq.false&select=id") else { return 0 }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return 0 }
