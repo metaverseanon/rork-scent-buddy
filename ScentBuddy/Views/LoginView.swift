@@ -5,6 +5,9 @@ struct LoginView: View {
 
     @State private var email: String = ""
     @State private var password: String = ""
+    @State private var showPassword: Bool = false
+    @State private var showingForgotPassword: Bool = false
+    @State private var showingMagicLink: Bool = false
     @State private var profileManager = UserProfileManager.shared
 
     @FocusState private var focusedField: Field?
@@ -86,15 +89,42 @@ struct LoginView: View {
                                 Image(systemName: "lock.fill")
                                     .foregroundStyle(.secondary)
                                     .font(.subheadline)
-                                SecureField("Your password", text: $password)
-                                    .textContentType(.password)
-                                    .focused($focusedField, equals: .password)
-                                    .submitLabel(.go)
-                                    .onSubmit { signIn() }
+                                Group {
+                                    if showPassword {
+                                        TextField("Your password", text: $password)
+                                            .textContentType(.password)
+                                    } else {
+                                        SecureField("Your password", text: $password)
+                                            .textContentType(.password)
+                                    }
+                                }
+                                .focused($focusedField, equals: .password)
+                                .submitLabel(.go)
+                                .onSubmit { signIn() }
+                                Button {
+                                    showPassword.toggle()
+                                } label: {
+                                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                                        .foregroundStyle(.secondary)
+                                        .font(.subheadline)
+                                }
+                                .buttonStyle(.plain)
                             }
                             .padding(12)
                             .background(AppearanceManager.shared.theme.cardColor)
                             .clipShape(.rect(cornerRadius: 12))
+
+                            HStack {
+                                Spacer()
+                                Button {
+                                    showingForgotPassword = true
+                                } label: {
+                                    Text("Forgot Password?")
+                                        .font(.caption)
+                                        .foregroundStyle(.tint)
+                                }
+                            }
+                            .padding(.trailing, 4)
                         }
 
                         Button {
@@ -118,6 +148,34 @@ struct LoginView: View {
                         }
                         .disabled(!isFormValid || profileManager.isLoading)
                         .opacity(isFormValid && !profileManager.isLoading ? 1 : 0.6)
+
+                        HStack {
+                            Rectangle()
+                                .fill(.secondary.opacity(0.3))
+                                .frame(height: 1)
+                            Text("or")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Rectangle()
+                                .fill(.secondary.opacity(0.3))
+                                .frame(height: 1)
+                        }
+                        .padding(.vertical, 4)
+
+                        Button {
+                            showingMagicLink = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "wand.and.stars")
+                                Text("Sign in with Magic Link")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .foregroundStyle(.purple)
+                            .clipShape(.rect(cornerRadius: 14))
+                        }
                     }
                     .padding(.horizontal)
                 }
@@ -134,6 +192,12 @@ struct LoginView: View {
                 }
             }
             .interactiveDismissDisabled(profileManager.isLoading)
+            .sheet(isPresented: $showingForgotPassword) {
+                ForgotPasswordView()
+            }
+            .sheet(isPresented: $showingMagicLink) {
+                MagicLinkView()
+            }
         }
     }
 

@@ -3,6 +3,8 @@ import SwiftUI
 struct SettingsView: View {
     private var currentTheme: AppTheme { AppearanceManager.shared.theme }
     @State private var showingNotePreferences: Bool = false
+    @State private var showingChangeEmail: Bool = false
+    @State private var showingChangePassword: Bool = false
     @State private var notificationService = NotificationService.shared
     @State private var testNotificationSent: Bool = false
 
@@ -80,6 +82,56 @@ struct SettingsView: View {
                             Text(testNotificationSent ? "Notification sent! Check in 3 seconds." : "Send a test notification to this device")
                                 .font(.caption)
                                 .foregroundStyle(testNotificationSent ? .green : .secondary)
+                        }
+                    }
+                }
+            }
+
+            if SupabaseService.shared.isAuthenticated {
+                Section("Account") {
+                    Button {
+                        showingChangeEmail = true
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "envelope.badge.fill")
+                                .font(.body)
+                                .foregroundStyle(.white)
+                                .frame(width: 32, height: 32)
+                                .background(.blue.gradient, in: .rect(cornerRadius: 8))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Change Email")
+                                    .foregroundStyle(.primary)
+                                Text(UserProfileManager.shared.profile.email)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+
+                    Button {
+                        showingChangePassword = true
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "lock.rotation")
+                                .font(.body)
+                                .foregroundStyle(.white)
+                                .frame(width: 32, height: 32)
+                                .background(.mint.gradient, in: .rect(cornerRadius: 8))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Change Password")
+                                    .foregroundStyle(.primary)
+                                Text("Update your account password")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
                     }
                 }
@@ -190,6 +242,12 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .sheet(isPresented: $showingNotePreferences) {
             NotePreferenceView()
+        }
+        .sheet(isPresented: $showingChangeEmail) {
+            ChangeEmailView(currentEmail: UserProfileManager.shared.profile.email)
+        }
+        .sheet(isPresented: $showingChangePassword) {
+            ChangePasswordView()
         }
     }
 }

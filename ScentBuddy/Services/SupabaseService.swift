@@ -183,6 +183,104 @@ final class SupabaseService {
         return user
     }
 
+    func sendMagicLink(email: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw SupabaseError.serverError("Service not configured.")
+        }
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/magiclink") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.timeoutInterval = 30
+        let body: [String: String] = ["email": email]
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        if http.statusCode >= 400 {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.msg ?? e.message ?? e.error_description ?? "Failed to send magic link")
+            }
+            throw SupabaseError.serverError("Failed to send magic link")
+        }
+    }
+
+    func sendPasswordReset(email: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
+            throw SupabaseError.serverError("Service not configured.")
+        }
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/recover") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.timeoutInterval = 30
+        let body: [String: String] = ["email": email]
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        if http.statusCode >= 400 {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.msg ?? e.message ?? e.error_description ?? "Failed to send reset email")
+            }
+            throw SupabaseError.serverError("Failed to send reset email")
+        }
+    }
+
+    func updateEmail(newEmail: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, let token = accessToken else {
+            throw SupabaseError.serverError("Not authenticated")
+        }
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/user") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 30
+        let body: [String: String] = ["email": newEmail]
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        if http.statusCode >= 400 {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.msg ?? e.message ?? e.error_description ?? "Failed to update email")
+            }
+            throw SupabaseError.serverError("Failed to update email")
+        }
+    }
+
+    func updatePassword(newPassword: String) async throws {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, let token = accessToken else {
+            throw SupabaseError.serverError("Not authenticated")
+        }
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/user") else {
+            throw SupabaseError.serverError("Invalid URL")
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 30
+        let body: [String: String] = ["password": newPassword]
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        if http.statusCode >= 400 {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.msg ?? e.message ?? e.error_description ?? "Failed to update password")
+            }
+            throw SupabaseError.serverError("Failed to update password")
+        }
+    }
+
     func signOut() async {
         if let token = accessToken, !supabaseURL.isEmpty, let logoutURL = URL(string: "\(supabaseURL)/auth/v1/logout") {
             var request = URLRequest(url: logoutURL)
