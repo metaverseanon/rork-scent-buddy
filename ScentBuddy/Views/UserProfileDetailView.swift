@@ -8,12 +8,12 @@ struct UserProfileDetailView: View {
     @State private var reviews: [PerfumeReview] = []
     @State private var followerCount: Int = 0
     @State private var followingCount: Int = 0
-    @State private var totalBumps: Int = 0
+    @State private var totalSniffs: Int = 0
     @State private var selectedTab: ProfileTab = .collection
     @State private var isLoading: Bool = true
-    @State private var bumpedItems: Set<String> = []
-    @State private var bumpCounts: [String: Int] = [:]
-    @State private var bumpAnimatingItem: String?
+    @State private var sniffedItems: Set<String> = []
+    @State private var sniffCounts: [String: Int] = [:]
+    @State private var sniffAnimatingItem: String?
 
     private var theme: AppTheme { AppearanceManager.shared.theme }
     private let supabase = SupabaseService.shared
@@ -44,13 +44,13 @@ struct UserProfileDetailView: View {
             ZStack {
                 Circle()
                     .fill(avatarGradient)
-                    .frame(width: 80, height: 80)
+                    .frame(width: 90, height: 90)
                 Image(systemName: user.avatarEmoji)
-                    .font(.system(size: 28))
+                    .font(.system(size: 32))
                     .foregroundStyle(.white)
             }
 
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Text(user.displayName)
                     .font(.title2.bold())
                 Text("@\(user.username)")
@@ -64,6 +64,17 @@ struct UserProfileDetailView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
+            }
+
+            HStack(spacing: 16) {
+                if !user.favoriteNote.isEmpty {
+                    Label(user.favoriteNote, systemImage: "heart.fill")
+                        .font(.caption)
+                        .foregroundStyle(.pink)
+                }
+                Label("Joined \(user.memberSince.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 12) {
@@ -97,7 +108,7 @@ struct UserProfileDetailView: View {
             Divider().frame(height: 32)
             statItem(value: "\(followingCount)", label: "Following")
             Divider().frame(height: 32)
-            statItem(value: "\(totalBumps)", label: "👃 Bumps", highlight: true)
+            statItem(value: "\(totalSniffs)", label: "👃 Sniffs", highlight: true)
         }
         .padding(.vertical, 14)
         .background(theme.cardColor)
@@ -163,13 +174,13 @@ struct UserProfileDetailView: View {
             } else {
                 ForEach(collection) { item in
                     let key = "\(item.perfume_name)|\(item.perfume_brand)"
-                    BumpableCollectionCard(
+                    SniffableCollectionCard(
                         item: item,
-                        isBumped: bumpedItems.contains(key),
-                        bumpCount: bumpCounts[key] ?? 0,
-                        isAnimating: bumpAnimatingItem == key
+                        isSniffed: sniffedItems.contains(key),
+                        sniffCount: sniffCounts[key] ?? 0,
+                        isAnimating: sniffAnimatingItem == key
                     ) {
-                        Task { await toggleBump(item: item) }
+                        Task { await toggleSniff(item: item) }
                     }
                 }
             }
@@ -218,47 +229,47 @@ struct UserProfileDetailView: View {
         .frame(maxWidth: .infinity, minHeight: 200)
     }
 
-    private func toggleBump(item: UserCollectionItem) async {
+    private func toggleSniff(item: UserCollectionItem) async {
         guard let currentUserId = supabase.currentUserId, currentUserId != user.id else { return }
 
         let key = "\(item.perfume_name)|\(item.perfume_brand)"
-        let wasBumped = bumpedItems.contains(key)
+        let wasSniffed = sniffedItems.contains(key)
 
         withAnimation(.spring(duration: 0.4, bounce: 0.5)) {
-            if wasBumped {
-                bumpedItems.remove(key)
-                bumpCounts[key] = max(0, (bumpCounts[key] ?? 1) - 1)
-                totalBumps = max(0, totalBumps - 1)
+            if wasSniffed {
+                sniffedItems.remove(key)
+                sniffCounts[key] = max(0, (sniffCounts[key] ?? 1) - 1)
+                totalSniffs = max(0, totalSniffs - 1)
             } else {
-                bumpedItems.insert(key)
-                bumpCounts[key] = (bumpCounts[key] ?? 0) + 1
-                totalBumps += 1
-                bumpAnimatingItem = key
+                sniffedItems.insert(key)
+                sniffCounts[key] = (sniffCounts[key] ?? 0) + 1
+                totalSniffs += 1
+                sniffAnimatingItem = key
             }
         }
 
-        if !wasBumped {
+        if !wasSniffed {
             try? await Task.sleep(for: .seconds(0.6))
-            withAnimation { bumpAnimatingItem = nil }
+            withAnimation { sniffAnimatingItem = nil }
         }
 
         do {
-            if wasBumped {
+            if wasSniffed {
                 try await supabase.removeNoseBump(userId: currentUserId, targetUserId: user.id, perfumeName: item.perfume_name, perfumeBrand: item.perfume_brand)
             } else {
-                let bump = NoseBumpInsert(
+                let sniff = NoseBumpInsert(
                     user_id: currentUserId,
                     target_user_id: user.id,
                     perfume_name: item.perfume_name,
                     perfume_brand: item.perfume_brand
                 )
-                try await supabase.sendNoseBump(bump)
+                try await supabase.sendNoseBump(sniff)
 
                 let notification = AppNotificationInsert(
                     user_id: user.id,
                     from_user_id: currentUserId,
-                    notification_type: "nose_bump",
-                    message: "gave \(item.perfume_name) a nose bump",
+                    notification_type: "sniff",
+                    message: "sniffed your \(item.perfume_name)",
                     perfume_name: item.perfume_name,
                     perfume_brand: item.perfume_brand
                 )
@@ -266,14 +277,14 @@ struct UserProfileDetailView: View {
             }
         } catch {
             withAnimation {
-                if wasBumped {
-                    bumpedItems.insert(key)
-                    bumpCounts[key] = (bumpCounts[key] ?? 0) + 1
-                    totalBumps += 1
+                if wasSniffed {
+                    sniffedItems.insert(key)
+                    sniffCounts[key] = (sniffCounts[key] ?? 0) + 1
+                    totalSniffs += 1
                 } else {
-                    bumpedItems.remove(key)
-                    bumpCounts[key] = max(0, (bumpCounts[key] ?? 1) - 1)
-                    totalBumps = max(0, totalBumps - 1)
+                    sniffedItems.remove(key)
+                    sniffCounts[key] = max(0, (sniffCounts[key] ?? 1) - 1)
+                    totalSniffs = max(0, totalSniffs - 1)
                 }
             }
         }
@@ -296,19 +307,19 @@ struct UserProfileDetailView: View {
         followerCount = (try? await followers.count) ?? 0
         followingCount = (try? await following.count) ?? 0
 
-        let allBumps = (try? await bumps) ?? []
-        totalBumps = allBumps.count
+        let allSniffs = (try? await bumps) ?? []
+        totalSniffs = allSniffs.count
 
         var counts: [String: Int] = [:]
-        for bump in allBumps {
-            let key = "\(bump.perfume_name)|\(bump.perfume_brand)"
+        for sniff in allSniffs {
+            let key = "\(sniff.perfume_name)|\(sniff.perfume_brand)"
             counts[key, default: 0] += 1
         }
-        bumpCounts = counts
+        sniffCounts = counts
 
         if let currentUserId = supabase.currentUserId {
-            let myBumps = allBumps.filter { $0.user_id == currentUserId }
-            bumpedItems = Set(myBumps.map { "\($0.perfume_name)|\($0.perfume_brand)" })
+            let mySniffs = allSniffs.filter { $0.user_id == currentUserId }
+            sniffedItems = Set(mySniffs.map { "\($0.perfume_name)|\($0.perfume_brand)" })
         }
     }
 
@@ -324,12 +335,12 @@ struct UserProfileDetailView: View {
     }
 }
 
-struct BumpableCollectionCard: View {
+struct SniffableCollectionCard: View {
     let item: UserCollectionItem
-    let isBumped: Bool
-    let bumpCount: Int
+    let isSniffed: Bool
+    let sniffCount: Int
     let isAnimating: Bool
-    let onBump: () -> Void
+    let onSniff: () -> Void
 
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
@@ -353,11 +364,11 @@ struct BumpableCollectionCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                    if bumpCount > 0 {
+                    if sniffCount > 0 {
                         HStack(spacing: 3) {
                             Text("👃")
                                 .font(.caption2)
-                            Text("\(bumpCount)")
+                            Text("\(sniffCount)")
                                 .font(.caption2.bold())
                                 .foregroundStyle(.orange)
                         }
@@ -385,16 +396,16 @@ struct BumpableCollectionCard: View {
             }
 
             Button {
-                onBump()
+                onSniff()
             } label: {
                 Image(systemName: "nose")
                     .font(.title3)
-                    .foregroundStyle(isBumped ? .orange : .secondary)
+                    .foregroundStyle(isSniffed ? .orange : .secondary)
                     .scaleEffect(isAnimating ? 1.4 : 1.0)
                     .rotationEffect(.degrees(isAnimating ? -15 : 0))
                     .animation(.spring(duration: 0.4, bounce: 0.6), value: isAnimating)
             }
-            .sensoryFeedback(.impact(weight: .medium, intensity: 0.8), trigger: isBumped) { _, newValue in newValue }
+            .sensoryFeedback(.impact(weight: .medium, intensity: 0.8), trigger: isSniffed) { _, newValue in newValue }
         }
         .padding(14)
         .background(theme.cardColor)

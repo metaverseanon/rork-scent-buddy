@@ -19,10 +19,10 @@ nonisolated struct PerfumeReviewInsert: Encodable, Sendable {
     let perfume_name: String
     let perfume_brand: String
     let rating: Int
-    let review_text: String
-    let longevity: Int
-    let sillage: Int
-    let value_for_money: Int
+    let review_text: String?
+    let longevity: Int?
+    let sillage: Int?
+    let value_for_money: Int?
 }
 
 nonisolated struct ReviewLike: Codable, Sendable {

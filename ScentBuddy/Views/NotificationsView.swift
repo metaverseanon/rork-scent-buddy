@@ -38,7 +38,7 @@ struct NotificationsView: View {
                 .foregroundStyle(.secondary)
             Text("No Notifications Yet")
                 .font(.title3.bold())
-            Text("When someone follows you or gives your fragrances a nose bump, you'll see it here.")
+            Text("When someone follows you or sniffs your fragrances, you'll see it here.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -92,7 +92,7 @@ struct NotificationRow: View {
     private var iconName: String {
         switch notification.notification_type {
         case "follow": return "person.fill.badge.plus"
-        case "nose_bump": return "nose"
+        case "nose_bump", "sniff": return "nose"
         default: return "bell.fill"
         }
     }
@@ -101,7 +101,7 @@ struct NotificationRow: View {
         switch notification.notification_type {
         case "follow":
             return LinearGradient(colors: [.purple, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "nose_bump":
+        case "nose_bump", "sniff":
             return LinearGradient(colors: [.orange, .pink], startPoint: .topLeading, endPoint: .bottomTrailing)
         default:
             return LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -117,13 +117,13 @@ struct NotificationRow: View {
             var boldName = AttributedString(name)
             boldName.font = .subheadline.bold()
             result = boldName + AttributedString(" started following you")
-        case "nose_bump":
+        case "nose_bump", "sniff":
             var boldName = AttributedString(name)
             boldName.font = .subheadline.bold()
             let perfume = notification.perfume_name ?? "a fragrance"
             var boldPerfume = AttributedString(perfume)
             boldPerfume.font = .subheadline.bold()
-            result = boldName + AttributedString(" gave ") + boldPerfume + AttributedString(" a nose bump 👃")
+            result = boldName + AttributedString(" sniffed your ") + boldPerfume + AttributedString(" 👃")
         default:
             result = AttributedString("New notification")
         }

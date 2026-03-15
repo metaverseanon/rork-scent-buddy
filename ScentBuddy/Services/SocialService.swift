@@ -9,15 +9,18 @@ nonisolated struct SocialProfile: Codable, Sendable, Identifiable {
     let favoriteNote: String
     let bio: String
     let memberSince: Date
+    let email: String
 
     init(from supabaseProfile: SupabaseProfile) {
         self.id = supabaseProfile.id
-        self.username = supabaseProfile.username ?? "user"
+        let rawUsername = supabaseProfile.username ?? ""
+        self.username = rawUsername.isEmpty ? (supabaseProfile.display_name ?? "user") : rawUsername
         self.displayName = supabaseProfile.display_name ?? "User"
         self.avatarEmoji = supabaseProfile.avatar_emoji ?? "drop.fill"
         self.collectionCount = 0
         self.favoriteNote = supabaseProfile.favorite_note ?? ""
         self.bio = supabaseProfile.bio ?? ""
+        self.email = supabaseProfile.email ?? ""
 
         if let dateStr = supabaseProfile.created_at {
             let formatter = ISO8601DateFormatter()

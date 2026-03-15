@@ -90,10 +90,10 @@ final class NotificationManager {
         case "follow":
             content.title = "New Follower"
             content.body = "\(name) started following you"
-        case "nose_bump":
+        case "nose_bump", "sniff":
             let perfume = notification.perfume_name ?? "a fragrance"
-            content.title = "Nose Bump! \u{1F443}"
-            content.body = "\(name) gave \(perfume) a nose bump"
+            content.title = "New Sniff! \u{1F443}"
+            content.body = "\(name) sniffed your \(perfume)"
         default:
             content.title = "ScentBuddy"
             content.body = "You have a new notification"

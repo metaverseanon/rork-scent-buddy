@@ -107,12 +107,13 @@ struct WriteReviewView: View {
 
         await supabase.refreshTokenIfNeeded()
 
+        let trimmedText = reviewText.trimmingCharacters(in: .whitespacesAndNewlines)
         let review = PerfumeReviewInsert(
             user_id: userId,
             perfume_name: perfumeName,
             perfume_brand: perfumeBrand,
             rating: rating,
-            review_text: reviewText.trimmingCharacters(in: .whitespaces),
+            review_text: trimmedText.isEmpty ? nil : trimmedText,
             longevity: longevity,
             sillage: sillage,
             value_for_money: valueForMoney

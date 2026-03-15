@@ -712,15 +712,17 @@ final class SupabaseService {
 
     func insertReview(_ review: PerfumeReviewInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
+        await refreshTokenIfNeeded()
         guard let url = URL(string: "\(supabaseURL)/rest/v1/perfume_reviews") else { throw SupabaseError.serverError("Invalid URL") }
-        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
-        request.httpBody = try JSONEncoder().encode(review)
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=representation")
+        let encoder = JSONEncoder()
+        request.httpBody = try encoder.encode(review)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
         if http.statusCode == 401 {
             await refreshTokenIfNeeded()
-            var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
-            retryRequest.httpBody = try JSONEncoder().encode(review)
+            var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=representation")
+            retryRequest.httpBody = try encoder.encode(review)
             let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
             guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
                 if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: retryData) {
@@ -734,6 +736,8 @@ final class SupabaseService {
             if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
                 throw SupabaseError.serverError(e.message ?? e.msg ?? "Failed to post review")
             }
+            let bodyStr = String(data: data, encoding: .utf8) ?? ""
+            print("[SupabaseService] Review insert failed (\(http.statusCode)): \(bodyStr)")
             throw SupabaseError.serverError("Failed to post review (\(http.statusCode))")
         }
     }
@@ -931,6 +935,15 @@ final class SupabaseService {
             }
             throw SupabaseError.serverError("Failed to update profile (\(http.statusCode))")
         }
+    }
+
+    func fetchAllSniffs() async throws -> [NoseBump] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return [] }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?select=*&order=created_at.desc") else { return [] }
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        return try JSONDecoder().decode([NoseBump].self, from: data)
     }
 
     func fetchNoseBumpCount(targetUserId: String, perfumeName: String, perfumeBrand: String) async throws -> Int {

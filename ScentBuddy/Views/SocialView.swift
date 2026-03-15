@@ -11,6 +11,7 @@ struct SocialView: View {
         case feed = "Feed"
         case discover = "Discover"
         case following = "Following"
+        case leaderboard = "Leaderboard"
     }
 
     var body: some View {
@@ -27,33 +28,38 @@ struct SocialView: View {
     }
 
     private var tabPicker: some View {
-        HStack(spacing: 8) {
-            ForEach(SocialTab.allCases, id: \.self) { tab in
-                Button {
-                    withAnimation(.snappy) { selectedTab = tab }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(tab.rawValue)
-                            .font(.subheadline.bold())
-                        if tab == .following {
-                            Text("\(socialService.followingCount)")
-                                .font(.caption2.bold())
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(selectedTab == tab ? .white.opacity(0.2) : theme.chipColor)
-                                .clipShape(Capsule())
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(SocialTab.allCases, id: \.self) { tab in
+                    Button {
+                        withAnimation(.snappy) { selectedTab = tab }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if tab == .leaderboard {
+                                Image(systemName: "trophy.fill")
+                                    .font(.caption)
+                            }
+                            Text(tab.rawValue)
+                                .font(.subheadline.bold())
+                            if tab == .following {
+                                Text("\(socialService.followingCount)")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(selectedTab == tab ? .white.opacity(0.2) : theme.chipColor)
+                                    .clipShape(Capsule())
+                            }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .background(selectedTab == tab ? AnyShapeStyle(.tint) : AnyShapeStyle(theme.chipColor))
+                        .foregroundStyle(selectedTab == tab ? .white : .primary)
+                        .clipShape(Capsule())
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .background(selectedTab == tab ? AnyShapeStyle(.tint) : AnyShapeStyle(theme.chipColor))
-                    .foregroundStyle(selectedTab == tab ? .white : .primary)
-                    .clipShape(Capsule())
                 }
             }
-            Spacer()
         }
-        .padding(.horizontal)
+        .contentMargins(.horizontal, 16)
         .padding(.vertical, 10)
     }
 
@@ -99,16 +105,15 @@ struct SocialView: View {
                             .buttonStyle(.plain)
                         }
                     }
+                case .leaderboard:
+                    SniffLeaderboardView()
                 }
             }
             .padding(.horizontal)
             .padding(.bottom, 20)
         }
         .navigationDestination(for: String.self) { userId in
-            if let user = socialService.discoveredUsers.first(where: { $0.id == userId }) ??
-               socialService.followingUsers.first(where: { $0.id == userId }) {
-                UserProfileDetailView(user: user)
-            }
+            UserProfileLoaderView(userId: userId, socialService: socialService)
         }
     }
 
