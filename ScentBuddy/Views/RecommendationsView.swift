@@ -88,7 +88,15 @@ struct RecommendationsView: View {
         try? await Task.sleep(for: .milliseconds(500))
         let allRecs = service.generateRecommendations(from: perfumes, wearEntries: wearEntries)
         recommendations = allRecs.filter { rec in
-            !perfumes.contains { $0.name.lowercased() == rec.name.lowercased() && $0.brand.lowercased() == rec.brand.lowercased() }
+            !perfumes.contains { perfume in
+                let recName = rec.name.lowercased().trimmingCharacters(in: .whitespaces)
+                let recBrand = rec.brand.lowercased().trimmingCharacters(in: .whitespaces)
+                let pName = perfume.name.lowercased().trimmingCharacters(in: .whitespaces)
+                let pBrand = perfume.brand.lowercased().trimmingCharacters(in: .whitespaces)
+                return pName == recName
+                    || (pName.contains(recName) || recName.contains(pName))
+                    && (pBrand == recBrand || pBrand.contains(recBrand) || recBrand.contains(pBrand))
+            }
         }
         isLoading = false
     }
