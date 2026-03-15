@@ -183,6 +183,8 @@ final class SupabaseService {
         return user
     }
 
+    static let magicLinkRedirectURL = "scentbuddy://auth/callback"
+
     func sendMagicLink(email: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             throw SupabaseError.serverError("Service not configured.")
@@ -195,8 +197,11 @@ final class SupabaseService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
         request.timeoutInterval = 30
-        let body: [String: String] = ["email": email]
-        request.httpBody = try JSONEncoder().encode(body)
+        let body: [String: Any] = [
+            "email": email,
+            "options": ["redirectTo": Self.magicLinkRedirectURL]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
         if http.statusCode >= 400 {
@@ -205,6 +210,84 @@ final class SupabaseService {
             }
             throw SupabaseError.serverError("Failed to send magic link")
         }
+    }
+
+    func handleMagicLinkURL(_ url: URL) async -> Bool {
+        let urlString = url.absoluteString
+
+        var fragment = url.fragment
+        if fragment == nil, let range = urlString.range(of: "#") {
+            fragment = String(urlString[range.upperBound...])
+        }
+
+        var params: [String: String] = [:]
+
+        if let fragment {
+            let pairs = fragment.components(separatedBy: "&")
+            for pair in pairs {
+                let kv = pair.components(separatedBy: "=")
+                if kv.count == 2 {
+                    params[kv[0]] = kv[1].removingPercentEncoding ?? kv[1]
+                }
+            }
+        }
+
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            for item in components.queryItems ?? [] {
+                if let value = item.value {
+                    params[item.name] = value
+                }
+            }
+        }
+
+        if let accessToken = params["access_token"],
+           let refreshToken = params["refresh_token"] {
+            saveSession(token: accessToken, refreshToken: refreshToken, userId: "")
+            if let userInfo = try? await fetchCurrentUser(token: accessToken) {
+                currentUserId = userInfo.id
+                UserDefaults.standard.set(userInfo.id, forKey: userIdKey)
+            }
+            return true
+        }
+
+        if let code = params["code"] {
+            return await exchangeCodeForSession(code: code)
+        }
+
+        return false
+    }
+
+    private func fetchCurrentUser(token: String) async throws -> SupabaseUser? {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/user") else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 15
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return nil }
+        return try JSONDecoder().decode(SupabaseUser.self, from: data)
+    }
+
+    private func exchangeCodeForSession(code: String) async -> Bool {
+        guard let url = URL(string: "\(supabaseURL)/auth/v1/token?grant_type=pkce") else { return false }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.timeoutInterval = 15
+        let body: [String: String] = ["auth_code": code]
+        request.httpBody = try? JSONEncoder().encode(body)
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse, http.statusCode < 400,
+              let authResponse = try? JSONDecoder().decode(SupabaseAuthResponse.self, from: data),
+              let token = authResponse.access_token,
+              let user = authResponse.user else {
+            return false
+        }
+        saveSession(token: token, refreshToken: authResponse.refresh_token, userId: user.id)
+        return true
     }
 
     func sendPasswordReset(email: String) async throws {

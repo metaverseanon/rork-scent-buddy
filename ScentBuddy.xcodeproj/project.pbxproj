@@ -406,6 +406,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScentBuddy/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access to scan and identify perfume bottles";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Choose a photo for your profile avatar";
@@ -443,6 +444,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScentBuddy/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access to scan and identify perfume bottles";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Choose a photo for your profile avatar";

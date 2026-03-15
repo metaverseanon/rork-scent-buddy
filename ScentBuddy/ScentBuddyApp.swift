@@ -44,6 +44,14 @@ struct ScentBuddyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onOpenURL { url in
+                    Task {
+                        let handled = await SupabaseService.shared.handleMagicLinkURL(url)
+                        if handled {
+                            await UserProfileManager.shared.refreshProfile()
+                        }
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
     }
