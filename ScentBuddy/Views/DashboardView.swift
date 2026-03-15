@@ -6,6 +6,7 @@ struct DashboardView: View {
     @Query(sort: \WearEntry.date, order: .reverse) private var wearEntries: [WearEntry]
     @Query private var wishlist: [WishlistPerfume]
     @State private var scentOfTheDay: ScentOfTheDay?
+    @State private var appearAnimated: Bool = false
     private let scentService = ScentOfTheDayService()
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
@@ -13,21 +14,36 @@ struct DashboardView: View {
         ScrollView {
             VStack(spacing: 20) {
                 greetingSection
+                    .opacity(appearAnimated ? 1 : 0)
+                    .offset(y: appearAnimated ? 0 : 12)
 
                 if let scent = scentOfTheDay {
                     scentOfDayCard(scent)
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.95).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                        .opacity(appearAnimated ? 1 : 0)
+                        .offset(y: appearAnimated ? 0 : 16)
                 }
 
                 quickStatsRow
+                    .opacity(appearAnimated ? 1 : 0)
+                    .offset(y: appearAnimated ? 0 : 20)
 
                 featuresGrid
+                    .opacity(appearAnimated ? 1 : 0)
+                    .offset(y: appearAnimated ? 0 : 24)
 
                 if !perfumes.isEmpty {
                     recentCollectionSection
+                        .opacity(appearAnimated ? 1 : 0)
+                        .offset(y: appearAnimated ? 0 : 28)
                 }
             }
             .padding(.horizontal)
             .padding(.bottom, 24)
+            .animation(.spring(duration: 0.7, bounce: 0.15), value: appearAnimated)
         }
         .background(theme.backgroundColor)
         .navigationTitle("ScentBuddy")
@@ -40,6 +56,9 @@ struct DashboardView: View {
         }
         .task {
             scentOfTheDay = scentService.suggest(from: perfumes, wearEntries: wearEntries)
+            withAnimation(.spring(duration: 0.7, bounce: 0.15)) {
+                appearAnimated = true
+            }
             WidgetDataService.updateWidgetData(
                 collectionCount: perfumes.count,
                 wearCount: wearEntries.count,
@@ -277,8 +296,10 @@ struct MiniStatCard: View {
             Image(systemName: icon)
                 .font(.body)
                 .foregroundStyle(color)
+                .symbolEffect(.pulse, options: .repeating.speed(0.5))
             Text(value)
                 .font(.title3.bold())
+                .contentTransition(.numericText())
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -296,6 +317,7 @@ struct FeatureTile<Destination: View>: View {
     let title: String
     let subtitle: String
     let gradient: [Color]
+    @State private var isPressed: Bool = false
 
     var body: some View {
         NavigationLink {
@@ -324,8 +346,16 @@ struct FeatureTile<Destination: View>: View {
             .padding(16)
             .background(AppearanceManager.shared.theme.cardColor)
             .clipShape(.rect(cornerRadius: 16))
+            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .animation(.spring(duration: 0.25, bounce: 0.4), value: isPressed)
         }
         .buttonStyle(.plain)
+        .sensoryFeedback(.selection, trigger: isPressed)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
     }
 }
 

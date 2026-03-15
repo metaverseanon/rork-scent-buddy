@@ -57,11 +57,12 @@ struct CollectionView: View {
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
+            .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.showingAddPerfume)
 
             Menu {
                 ForEach(SortOption.allCases, id: \.self) { option in
                     Button {
-                        withAnimation { viewModel.selectedSortOption = option }
+                        withAnimation(.snappy) { viewModel.selectedSortOption = option }
                     } label: {
                         Label(option.rawValue, systemImage: option.icon)
                     }
@@ -110,6 +111,7 @@ struct CollectionView: View {
                             .foregroundStyle(viewModel.selectedFilter == filter ? .white : .primary)
                             .clipShape(Capsule())
                     }
+                    .sensoryFeedback(.selection, trigger: viewModel.selectedFilter)
                 }
             }
         }
@@ -122,7 +124,7 @@ struct CollectionView: View {
                 NavigationLink(value: perfume) {
                     PerfumeCard(perfume: perfume)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(CardButtonStyle())
             }
         }
         .padding(.bottom, 20)
@@ -146,6 +148,15 @@ struct CollectionView: View {
     }
 }
 
+struct CardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(.spring(duration: 0.25, bounce: 0.4), value: configuration.isPressed)
+    }
+}
+
 struct StatCard: View {
     let value: String
     let label: String
@@ -159,6 +170,7 @@ struct StatCard: View {
                 .foregroundStyle(color)
             Text(value)
                 .font(.title2.bold())
+                .contentTransition(.numericText())
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -193,6 +205,7 @@ struct PerfumeCard: View {
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
                         .padding(8)
+                        .transition(.scale.combined(with: .opacity))
                 }
             }
 

@@ -99,13 +99,16 @@ struct AddPerfumeView: View {
                         HStack(spacing: 8) {
                             ForEach(1...5, id: \.self) { star in
                                 Button {
-                                    withAnimation(.snappy) { rating = star }
+                                    withAnimation(.spring(duration: 0.35, bounce: 0.4)) { rating = star }
                                 } label: {
                                     Image(systemName: star <= rating ? "star.fill" : "star")
                                         .font(.title2)
                                         .foregroundStyle(star <= rating ? Color.orange : Color.gray.opacity(0.3))
+                                        .scaleEffect(star <= rating ? 1.0 : 0.85)
+                                        .animation(.spring(duration: 0.3, bounce: 0.5), value: rating)
                                 }
                                 .buttonStyle(.plain)
+                                .sensoryFeedback(.impact(weight: .light), trigger: rating)
                             }
                         }
                     }
@@ -210,6 +213,8 @@ struct AddPerfumeView: View {
     }
 
     private func savePerfume() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         let trimmedBrand = brand.trimmingCharacters(in: .whitespaces)
         let trimmedNotes = personalNotes.trimmingCharacters(in: .whitespaces)
@@ -324,6 +329,8 @@ struct NotePickerView: View {
     }
 
     private func toggleNote(_ note: String) {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
         withAnimation(.snappy) {
             if let index = selectedNotes.firstIndex(of: note) {
                 selectedNotes.remove(at: index)

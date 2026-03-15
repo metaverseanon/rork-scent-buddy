@@ -78,6 +78,7 @@ struct ProfileView: View {
                         .foregroundStyle(.white)
                         .clipShape(.rect(cornerRadius: 14))
                 }
+                .sensoryFeedback(.impact(weight: .medium), trigger: showingCreateAccount)
 
                 Button {
                     showingLogin = true
@@ -90,6 +91,7 @@ struct ProfileView: View {
                         .foregroundStyle(.tint)
                         .clipShape(.rect(cornerRadius: 14))
                 }
+                .sensoryFeedback(.impact(weight: .light), trigger: showingLogin)
             }
             .padding(.horizontal, 20)
         }
@@ -137,8 +139,11 @@ struct ProfileView: View {
                 .foregroundStyle(.white)
                 .clipShape(.rect(cornerRadius: 14))
             }
+            .sensoryFeedback(.impact(weight: .medium), trigger: showingEditProfile)
 
             Button(role: .destructive) {
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.warning)
                 UserProfileManager.shared.signOut()
             } label: {
                 HStack {

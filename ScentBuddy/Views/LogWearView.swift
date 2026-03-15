@@ -153,13 +153,16 @@ struct LogWearView: View {
                 HStack(spacing: 4) {
                     ForEach(1...5, id: \.self) { star in
                         Button {
-                            withAnimation(.snappy) { rating = star }
+                            withAnimation(.spring(duration: 0.35, bounce: 0.4)) { rating = star }
                         } label: {
                             Image(systemName: star <= rating ? "star.fill" : "star")
                                 .font(.body)
                                 .foregroundStyle(star <= rating ? .orange : .gray.opacity(0.3))
+                                .scaleEffect(star <= rating ? 1.0 : 0.85)
+                                .animation(.spring(duration: 0.3, bounce: 0.5), value: rating)
                         }
                         .buttonStyle(.plain)
+                        .sensoryFeedback(.impact(weight: .light), trigger: rating)
                     }
                 }
             }
@@ -173,7 +176,7 @@ struct LogWearView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {
                 ForEach(moods, id: \.self) { m in
                     Button {
-                        withAnimation(.snappy) { mood = m }
+                        withAnimation(.spring(duration: 0.3, bounce: 0.3)) { mood = m }
                     } label: {
                         Text(m)
                             .font(.caption)
@@ -186,6 +189,7 @@ struct LogWearView: View {
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .sensoryFeedback(.selection, trigger: mood)
                 }
             }
         } header: {
@@ -200,26 +204,29 @@ struct LogWearView: View {
                 Spacer()
                 HStack(spacing: 16) {
                     Button {
-                        if sprays > 1 { withAnimation { sprays -= 1 } }
+                        if sprays > 1 { withAnimation(.snappy) { sprays -= 1 } }
                     } label: {
                         Image(systemName: "minus.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .sensoryFeedback(.impact(weight: .light), trigger: sprays)
 
                     Text("\(sprays)")
                         .font(.title3.bold().monospacedDigit())
                         .frame(minWidth: 30)
+                        .contentTransition(.numericText())
 
                     Button {
-                        if sprays < 20 { withAnimation { sprays += 1 } }
+                        if sprays < 20 { withAnimation(.snappy) { sprays += 1 } }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
                             .foregroundStyle(.tint)
                     }
                     .buttonStyle(.plain)
+                    .sensoryFeedback(.impact(weight: .light), trigger: sprays)
                 }
             }
         } header: {
@@ -238,6 +245,8 @@ struct LogWearView: View {
 
     private func save() {
         guard let perfume = selectedPerfume else { return }
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
         let entry = WearEntry(
             perfumeName: perfume.name,
             perfumeBrand: perfume.brand,

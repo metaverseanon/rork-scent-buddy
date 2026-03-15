@@ -8,6 +8,7 @@ struct WearDiaryView: View {
     @State private var showingLogWear: Bool = false
     @State private var selectedMonth: Date = Date()
     @State private var scentOfTheDay: ScentOfTheDay?
+    @State private var scentLogged: Bool = false
 
     private let service = ScentOfTheDayService()
     private let calendar = Calendar.current
@@ -27,12 +28,17 @@ struct WearDiaryView: View {
                             .foregroundStyle(.white)
                             .clipShape(Capsule())
                     }
+                    .sensoryFeedback(.impact(weight: .medium), trigger: showingLogWear)
                     Spacer()
                 }
                 .padding(.top, 4)
 
                 if let scent = scentOfTheDay {
                     scentOfTheDayCard(scent)
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.95).combined(with: .opacity),
+                            removal: .scale(scale: 0.9).combined(with: .opacity)
+                        ))
                 }
 
                 statsSection
@@ -125,6 +131,7 @@ struct WearDiaryView: View {
                 .foregroundStyle(.white)
                 .clipShape(.rect(cornerRadius: 12))
             }
+            .sensoryFeedback(.success, trigger: scentLogged)
         }
         .padding(16)
         .background(AppearanceManager.shared.theme.cardColor)
@@ -159,25 +166,28 @@ struct WearDiaryView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Button {
-                    withAnimation { changeMonth(-1) }
+                    withAnimation(.spring(duration: 0.4, bounce: 0.2)) { changeMonth(-1) }
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.body.bold())
                 }
+                .sensoryFeedback(.selection, trigger: selectedMonth)
 
                 Spacer()
 
                 Text(selectedMonth, format: .dateTime.month(.wide).year())
                     .font(.headline)
+                    .contentTransition(.numericText())
 
                 Spacer()
 
                 Button {
-                    withAnimation { changeMonth(1) }
+                    withAnimation(.spring(duration: 0.4, bounce: 0.2)) { changeMonth(1) }
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.body.bold())
                 }
+                .sensoryFeedback(.selection, trigger: selectedMonth)
             }
 
             CalendarGridView(
@@ -217,9 +227,13 @@ struct WearDiaryView: View {
             } else {
                 ForEach(wearEntries.prefix(20)) { entry in
                     WearEntryRow(entry: entry)
+                        .transition(.asymmetric(
+                            insertion: .slide.combined(with: .opacity),
+                            removal: .opacity
+                        ))
                         .contextMenu {
                             Button(role: .destructive) {
-                                withAnimation { modelContext.delete(entry) }
+                                withAnimation(.spring(duration: 0.35, bounce: 0.2)) { modelContext.delete(entry) }
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -312,7 +326,10 @@ struct WearDiaryView: View {
             mood: "Confident"
         )
         modelContext.insert(entry)
-        scentOfTheDay = nil
+        scentLogged.toggle()
+        withAnimation(.spring(duration: 0.4, bounce: 0.3)) {
+            scentOfTheDay = nil
+        }
     }
 }
 
@@ -329,6 +346,7 @@ struct DiaryStatCard: View {
                 .foregroundStyle(color)
             Text(value)
                 .font(.title2.bold())
+                .contentTransition(.numericText())
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)

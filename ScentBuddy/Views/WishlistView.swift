@@ -24,6 +24,7 @@ struct WishlistView: View {
                                 .foregroundStyle(.white)
                                 .clipShape(Capsule())
                         }
+                        .sensoryFeedback(.impact(weight: .medium), trigger: showingAddSheet)
                         Spacer()
                     }
                 }
@@ -72,7 +73,7 @@ struct WishlistView: View {
     }
 
     private func deleteItem(_ item: WishlistPerfume) {
-        withAnimation {
+        withAnimation(.spring(duration: 0.35, bounce: 0.2)) {
             modelContext.delete(item)
         }
     }
@@ -158,6 +159,10 @@ struct WishlistCard: View {
         .padding(16)
         .background(AppearanceManager.shared.theme.cardColor)
         .clipShape(.rect(cornerRadius: 16))
+        .transition(.asymmetric(
+            insertion: .scale(scale: 0.95).combined(with: .opacity),
+            removal: .scale(scale: 0.9).combined(with: .opacity)
+        ))
         .contextMenu {
             Button(role: .destructive) {
                 onDelete()

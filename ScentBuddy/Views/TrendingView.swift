@@ -107,6 +107,7 @@ struct TrendingView: View {
                 .foregroundStyle(isSelected ? .white : .primary)
                 .clipShape(Capsule())
         }
+        .sensoryFeedback(.selection, trigger: selectedCategory)
     }
 
     private var filteredPerfumes: [TrendingPerfume] {
@@ -310,6 +311,7 @@ struct TrendingCard: View {
                 }
                 .foregroundStyle(.tint)
             }
+            .sensoryFeedback(.selection, trigger: isExpanded)
         }
         .padding(16)
         .background(AppearanceManager.shared.theme.cardColor)

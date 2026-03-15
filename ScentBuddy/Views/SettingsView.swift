@@ -116,7 +116,7 @@ struct SettingsView: View {
                     HStack(spacing: 12) {
                         ForEach(AppTheme.allCases, id: \.self) { theme in
                             Button {
-                                withAnimation(.snappy) {
+                                withAnimation(.spring(duration: 0.4, bounce: 0.25)) {
                                     AppearanceManager.shared.theme = theme
                                 }
                             } label: {
@@ -151,6 +151,7 @@ struct SettingsView: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            .sensoryFeedback(.selection, trigger: currentTheme)
                         }
                     }
                     .padding(.vertical, 4)

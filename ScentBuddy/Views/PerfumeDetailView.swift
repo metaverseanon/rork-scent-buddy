@@ -9,6 +9,7 @@ struct PerfumeDetailView: View {
     @State private var showingEditSheet: Bool = false
     @State private var showingLogWear: Bool = false
     @State private var showingWriteReview: Bool = false
+    @State private var headerAppeared: Bool = false
 
     var body: some View {
         ScrollView {
@@ -82,7 +83,11 @@ struct PerfumeDetailView: View {
                 Image(systemName: "drop.fill")
                     .font(.system(size: 60))
                     .foregroundStyle(.white.opacity(0.15))
+                    .scaleEffect(headerAppeared ? 1.0 : 0.5)
+                    .opacity(headerAppeared ? 1.0 : 0)
+                    .animation(.spring(duration: 0.8, bounce: 0.3).delay(0.1), value: headerAppeared)
             }
+            .onAppear { headerAppeared = true }
 
             VStack(alignment: .leading, spacing: 4) {
                 if perfume.isFavorite {
@@ -131,15 +136,17 @@ struct PerfumeDetailView: View {
             HStack(spacing: 12) {
                 ForEach(1...5, id: \.self) { star in
                     Button {
-                        withAnimation(.snappy) {
+                        withAnimation(.spring(duration: 0.35, bounce: 0.4)) {
                             perfume.rating = perfume.rating == star ? 0 : star
                         }
                     } label: {
                         Image(systemName: star <= perfume.rating ? "star.fill" : "star")
                             .font(.title2)
                             .foregroundStyle(star <= perfume.rating ? .orange : .gray.opacity(0.3))
+                            .scaleEffect(star <= perfume.rating ? 1.0 : 0.85)
+                            .animation(.spring(duration: 0.3, bounce: 0.5), value: perfume.rating)
                     }
-                    .sensoryFeedback(.selection, trigger: perfume.rating)
+                    .sensoryFeedback(.impact(weight: .light), trigger: perfume.rating)
                 }
             }
             if perfume.rating > 0 {
@@ -244,6 +251,7 @@ struct PerfumeDetailView: View {
                     .foregroundStyle(.white)
                     .clipShape(.rect(cornerRadius: 12))
                 }
+                .sensoryFeedback(.impact(weight: .medium), trigger: showingWriteReview)
             }
         }
     }

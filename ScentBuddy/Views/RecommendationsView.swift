@@ -180,9 +180,11 @@ struct RecommendationCard: View {
                             .font(.caption.bold())
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption2)
+                            .rotationEffect(.degrees(isExpanded ? 0 : 0))
                     }
                     .foregroundStyle(.tint)
                 }
+                .sensoryFeedback(.selection, trigger: isExpanded)
 
                 Spacer()
 
@@ -190,6 +192,7 @@ struct RecommendationCard: View {
                     Label("In Wishlist", systemImage: "heart.fill")
                         .font(.caption.bold())
                         .foregroundStyle(.pink)
+                        .transition(.scale.combined(with: .opacity))
                 } else {
                     Button {
                         addToWishlist()
@@ -198,6 +201,7 @@ struct RecommendationCard: View {
                             .font(.caption.bold())
                             .foregroundStyle(.pink)
                     }
+                    .sensoryFeedback(.success, trigger: justAdded)
                 }
             }
         }
