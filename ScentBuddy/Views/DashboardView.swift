@@ -47,7 +47,9 @@ struct DashboardView: View {
             .padding(.bottom, 24)
             .animation(.spring(duration: 0.7, bounce: 0.15), value: appearAnimated)
         }
-        .background(theme.backgroundColor)
+        .background(theme.backgroundColor.ignoresSafeArea())
+        .toolbarBackground(theme.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .navigationTitle("ScentBuddy")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -83,6 +85,7 @@ struct DashboardView: View {
             )
             syncExistingCollectionToCloud()
             await notificationManager.refreshUnreadCount()
+            await notificationManager.checkAndSendPushNotifications()
         }
     }
 

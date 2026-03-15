@@ -49,7 +49,9 @@ struct WearDiaryView: View {
             }
             .padding(.horizontal)
         }
-        .background(AppearanceManager.shared.theme.backgroundColor)
+        .background(AppearanceManager.shared.theme.backgroundColor.ignoresSafeArea())
+        .toolbarBackground(AppearanceManager.shared.theme.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .navigationTitle("Wear Diary")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

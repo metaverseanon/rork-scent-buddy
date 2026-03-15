@@ -105,6 +105,8 @@ struct WriteReviewView: View {
         isSubmitting = true
         errorMessage = nil
 
+        await supabase.refreshTokenIfNeeded()
+
         let review = PerfumeReviewInsert(
             user_id: userId,
             perfume_name: perfumeName,
@@ -118,7 +120,7 @@ struct WriteReviewView: View {
 
         do {
             try await supabase.insertReview(review)
-            try await supabase.insertActivity(ActivityFeedInsert(
+            try? await supabase.insertActivity(ActivityFeedInsert(
                 user_id: userId,
                 activity_type: "wrote_review",
                 perfume_name: perfumeName,

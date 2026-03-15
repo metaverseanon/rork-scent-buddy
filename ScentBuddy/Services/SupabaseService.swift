@@ -716,11 +716,25 @@ final class SupabaseService {
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(review)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
-            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
-                throw SupabaseError.serverError(e.message ?? "Failed to post review")
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+            retryRequest.httpBody = try JSONEncoder().encode(review)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: retryData) {
+                    throw SupabaseError.serverError(e.message ?? e.msg ?? "Failed to post review")
+                }
+                throw SupabaseError.serverError("Failed to post review")
             }
-            throw SupabaseError.serverError("Failed to post review")
+            return
+        }
+        if http.statusCode >= 400 {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.message ?? e.msg ?? "Failed to post review")
+            }
+            throw SupabaseError.serverError("Failed to post review (\(http.statusCode))")
         }
     }
 
@@ -771,7 +785,13 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed") else { return }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(activity)
-        _ = try? await URLSession.shared.data(for: request)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+            retryRequest.httpBody = try JSONEncoder().encode(activity)
+            _ = try? await URLSession.shared.data(for: retryRequest)
+        }
     }
 
     func fetchFollowers(userId: String) async throws -> [SupabaseFollow] {

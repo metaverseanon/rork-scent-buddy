@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 @Observable
 final class NotificationManager {
@@ -10,6 +11,7 @@ final class NotificationManager {
 
     private let supabase = SupabaseService.shared
     private var profileCache: [String: SupabaseProfile] = [:]
+    private let lastCheckedKey = "last_notification_check_id"
 
     private init() {}
 
@@ -40,6 +42,70 @@ final class NotificationManager {
         } catch {
             print("[NotificationManager] Failed to refresh count: \(error)")
         }
+    }
+
+    func checkAndSendPushNotifications() async {
+        guard let userId = supabase.currentUserId else { return }
+
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        guard settings.authorizationStatus == .authorized else { return }
+
+        do {
+            let recent = try await supabase.fetchNotifications(userId: userId)
+            let lastCheckedId = UserDefaults.standard.string(forKey: lastCheckedKey)
+
+            let newNotifications: [AppNotification]
+            if let lastId = lastCheckedId, let lastIndex = recent.firstIndex(where: { $0.id == lastId }) {
+                newNotifications = Array(recent[..<lastIndex])
+            } else if lastCheckedId != nil {
+                newNotifications = recent.filter { $0.is_read != true }
+            } else {
+                newNotifications = []
+            }
+
+            if let firstId = recent.first?.id {
+                UserDefaults.standard.set(firstId, forKey: lastCheckedKey)
+            }
+
+            for notification in newNotifications.prefix(5) {
+                await sendLocalPush(for: notification)
+            }
+        } catch {
+            print("[NotificationManager] Push check failed: \(error)")
+        }
+    }
+
+    private func sendLocalPush(for notification: AppNotification) async {
+        if profileCache[notification.from_user_id] == nil {
+            if let profile = try? await supabase.fetchProfile(userId: notification.from_user_id) {
+                profileCache[notification.from_user_id] = profile
+            }
+        }
+        let name = displayName(for: notification.from_user_id)
+
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+
+        switch notification.notification_type {
+        case "follow":
+            content.title = "New Follower"
+            content.body = "\(name) started following you"
+        case "nose_bump":
+            let perfume = notification.perfume_name ?? "a fragrance"
+            content.title = "Nose Bump! \u{1F443}"
+            content.body = "\(name) gave \(perfume) a nose bump"
+        default:
+            content.title = "ScentBuddy"
+            content.body = "You have a new notification"
+        }
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "social_\(notification.id)",
+            content: content,
+            trigger: trigger
+        )
+        try? await UNUserNotificationCenter.current().add(request)
     }
 
     func markAllRead() async {

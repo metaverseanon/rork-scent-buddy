@@ -15,7 +15,9 @@ struct ProfileView: View {
             .padding(.horizontal)
             .padding(.vertical, 20)
         }
-        .background(AppearanceManager.shared.theme.backgroundColor)
+        .background(AppearanceManager.shared.theme.backgroundColor.ignoresSafeArea())
+        .toolbarBackground(AppearanceManager.shared.theme.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
