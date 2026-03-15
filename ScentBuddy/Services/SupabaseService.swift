@@ -799,10 +799,11 @@ final class SupabaseService {
         }
     }
 
-    func fetchNoseBumps(collectionItemIds: [String]) async throws -> [NoseBump] {
-        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, !collectionItemIds.isEmpty else { return [] }
-        let ids = collectionItemIds.joined(separator: ",")
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?collection_item_id=in.(\(ids))&select=*") else { return [] }
+    func fetchNoseBumps(targetUserId: String, perfumeName: String, perfumeBrand: String) async throws -> [NoseBump] {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return [] }
+        let encodedName = perfumeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeName
+        let encodedBrand = perfumeBrand.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeBrand
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?target_user_id=eq.\(targetUserId)&perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)&select=*") else { return [] }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
@@ -818,9 +819,11 @@ final class SupabaseService {
         return try JSONDecoder().decode([NoseBump].self, from: data)
     }
 
-    func hasUserBumped(userId: String, collectionItemId: String) async throws -> Bool {
+    func hasUserBumped(userId: String, targetUserId: String, perfumeName: String, perfumeBrand: String) async throws -> Bool {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return false }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?user_id=eq.\(userId)&collection_item_id=eq.\(collectionItemId)&select=id&limit=1") else { return false }
+        let encodedName = perfumeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeName
+        let encodedBrand = perfumeBrand.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeBrand
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?user_id=eq.\(userId)&target_user_id=eq.\(targetUserId)&perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)&select=id&limit=1") else { return false }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return false }
@@ -828,9 +831,11 @@ final class SupabaseService {
         return !items.isEmpty
     }
 
-    func removeNoseBump(userId: String, collectionItemId: String) async throws {
+    func removeNoseBump(userId: String, targetUserId: String, perfumeName: String, perfumeBrand: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?user_id=eq.\(userId)&collection_item_id=eq.\(collectionItemId)") else { throw SupabaseError.serverError("Invalid URL") }
+        let encodedName = perfumeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeName
+        let encodedBrand = perfumeBrand.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeBrand
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?user_id=eq.\(userId)&target_user_id=eq.\(targetUserId)&perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)") else { throw SupabaseError.serverError("Invalid URL") }
         let request = authenticatedRequest(url: url, method: "DELETE")
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
@@ -908,9 +913,11 @@ final class SupabaseService {
         }
     }
 
-    func fetchNoseBumpCount(collectionItemId: String) async throws -> Int {
+    func fetchNoseBumpCount(targetUserId: String, perfumeName: String, perfumeBrand: String) async throws -> Int {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return 0 }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?collection_item_id=eq.\(collectionItemId)&select=id") else { return 0 }
+        let encodedName = perfumeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeName
+        let encodedBrand = perfumeBrand.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? perfumeBrand
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?target_user_id=eq.\(targetUserId)&perfume_name=eq.\(encodedName)&perfume_brand=eq.\(encodedBrand)&select=id") else { return 0 }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return 0 }

@@ -162,11 +162,12 @@ struct UserProfileDetailView: View {
                 emptyState(icon: "drop", title: "No Fragrances", subtitle: "This user hasn't added any fragrances yet.")
             } else {
                 ForEach(collection) { item in
+                    let key = "\(item.perfume_name)|\(item.perfume_brand)"
                     BumpableCollectionCard(
                         item: item,
-                        isBumped: bumpedItems.contains(item.id),
-                        bumpCount: bumpCounts[item.id] ?? 0,
-                        isAnimating: bumpAnimatingItem == item.id
+                        isBumped: bumpedItems.contains(key),
+                        bumpCount: bumpCounts[key] ?? 0,
+                        isAnimating: bumpAnimatingItem == key
                     ) {
                         Task { await toggleBump(item: item) }
                     }
@@ -220,18 +221,19 @@ struct UserProfileDetailView: View {
     private func toggleBump(item: UserCollectionItem) async {
         guard let currentUserId = supabase.currentUserId, currentUserId != user.id else { return }
 
-        let wasBumped = bumpedItems.contains(item.id)
+        let key = "\(item.perfume_name)|\(item.perfume_brand)"
+        let wasBumped = bumpedItems.contains(key)
 
         withAnimation(.spring(duration: 0.4, bounce: 0.5)) {
             if wasBumped {
-                bumpedItems.remove(item.id)
-                bumpCounts[item.id] = max(0, (bumpCounts[item.id] ?? 1) - 1)
+                bumpedItems.remove(key)
+                bumpCounts[key] = max(0, (bumpCounts[key] ?? 1) - 1)
                 totalBumps = max(0, totalBumps - 1)
             } else {
-                bumpedItems.insert(item.id)
-                bumpCounts[item.id] = (bumpCounts[item.id] ?? 0) + 1
+                bumpedItems.insert(key)
+                bumpCounts[key] = (bumpCounts[key] ?? 0) + 1
                 totalBumps += 1
-                bumpAnimatingItem = item.id
+                bumpAnimatingItem = key
             }
         }
 
@@ -242,12 +244,11 @@ struct UserProfileDetailView: View {
 
         do {
             if wasBumped {
-                try await supabase.removeNoseBump(userId: currentUserId, collectionItemId: item.id)
+                try await supabase.removeNoseBump(userId: currentUserId, targetUserId: user.id, perfumeName: item.perfume_name, perfumeBrand: item.perfume_brand)
             } else {
                 let bump = NoseBumpInsert(
                     user_id: currentUserId,
                     target_user_id: user.id,
-                    collection_item_id: item.id,
                     perfume_name: item.perfume_name,
                     perfume_brand: item.perfume_brand
                 )
@@ -265,12 +266,12 @@ struct UserProfileDetailView: View {
         } catch {
             withAnimation {
                 if wasBumped {
-                    bumpedItems.insert(item.id)
-                    bumpCounts[item.id] = (bumpCounts[item.id] ?? 0) + 1
+                    bumpedItems.insert(key)
+                    bumpCounts[key] = (bumpCounts[key] ?? 0) + 1
                     totalBumps += 1
                 } else {
-                    bumpedItems.remove(item.id)
-                    bumpCounts[item.id] = max(0, (bumpCounts[item.id] ?? 1) - 1)
+                    bumpedItems.remove(key)
+                    bumpCounts[key] = max(0, (bumpCounts[key] ?? 1) - 1)
                     totalBumps = max(0, totalBumps - 1)
                 }
             }
@@ -299,15 +300,14 @@ struct UserProfileDetailView: View {
 
         var counts: [String: Int] = [:]
         for bump in allBumps {
-            if let itemId = bump.collection_item_id {
-                counts[itemId, default: 0] += 1
-            }
+            let key = "\(bump.perfume_name)|\(bump.perfume_brand)"
+            counts[key, default: 0] += 1
         }
         bumpCounts = counts
 
         if let currentUserId = supabase.currentUserId {
             let myBumps = allBumps.filter { $0.user_id == currentUserId }
-            bumpedItems = Set(myBumps.compactMap { $0.collection_item_id })
+            bumpedItems = Set(myBumps.map { "\($0.perfume_name)|\($0.perfume_brand)" })
         }
     }
 
