@@ -3,6 +3,8 @@ import SwiftUI
 struct ContentView: View {
     @State private var onboardingManager = OnboardingManager.shared
     @State private var showSplash: Bool = true
+    @State private var notificationManager = NotificationManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
     var body: some View {
@@ -29,6 +31,14 @@ struct ContentView: View {
             }
             if SupabaseService.shared.isAuthenticated {
                 await UserProfileManager.shared.refreshProfile()
+                notificationManager.startPolling()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && SupabaseService.shared.isAuthenticated {
+                notificationManager.startPolling()
+            } else if newPhase == .background {
+                notificationManager.stopPolling()
             }
         }
     }

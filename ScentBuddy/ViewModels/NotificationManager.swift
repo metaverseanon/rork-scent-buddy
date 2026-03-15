@@ -12,8 +12,26 @@ final class NotificationManager {
     private let supabase = SupabaseService.shared
     private var profileCache: [String: SupabaseProfile] = [:]
     private let lastCheckedKey = "last_notification_check_id"
+    private var pollingTask: Task<Void, Never>?
 
     private init() {}
+
+    func startPolling() {
+        stopPolling()
+        pollingTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { break }
+                await refreshUnreadCount()
+                await checkAndSendPushNotifications()
+            }
+        }
+    }
+
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+    }
 
     func loadNotifications() async {
         guard let userId = supabase.currentUserId else { return }
@@ -60,7 +78,7 @@ final class NotificationManager {
             } else if lastCheckedId != nil {
                 newNotifications = recent.filter { $0.is_read != true }
             } else {
-                newNotifications = []
+                newNotifications = recent.filter { $0.is_read != true }
             }
 
             if let firstId = recent.first?.id {

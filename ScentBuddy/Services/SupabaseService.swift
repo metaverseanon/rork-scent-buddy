@@ -896,10 +896,17 @@ final class SupabaseService {
     func fetchUnreadNotificationCount(userId: String) async throws -> Int {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return 0 }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&read=eq.false&select=id") else { return 0 }
-        let request = authenticatedRequest(url: url)
+        var request = authenticatedRequest(url: url)
+        request.setValue("count=exact", forHTTPHeaderField: "Prefer")
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return 0 }
-        let items = try JSONDecoder().decode([AppNotification].self, from: data)
+        if let range = http.value(forHTTPHeaderField: "Content-Range"),
+           let countStr = range.split(separator: "/").last,
+           let count = Int(countStr) {
+            return count
+        }
+        nonisolated struct IdOnly: Codable, Sendable { let id: String }
+        let items = (try? JSONDecoder().decode([IdOnly].self, from: data)) ?? []
         return items.count
     }
 
