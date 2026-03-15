@@ -311,13 +311,20 @@ struct MiniStatCard: View {
     }
 }
 
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(.spring(duration: 0.25, bounce: 0.4), value: configuration.isPressed)
+    }
+}
+
 struct FeatureTile<Destination: View>: View {
     let destination: Destination
     let icon: String
     let title: String
     let subtitle: String
     let gradient: [Color]
-    @State private var isPressed: Bool = false
 
     var body: some View {
         NavigationLink {
@@ -346,16 +353,8 @@ struct FeatureTile<Destination: View>: View {
             .padding(16)
             .background(AppearanceManager.shared.theme.cardColor)
             .clipShape(.rect(cornerRadius: 16))
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(.spring(duration: 0.25, bounce: 0.4), value: isPressed)
         }
-        .buttonStyle(.plain)
-        .sensoryFeedback(.selection, trigger: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
+        .buttonStyle(ScaleButtonStyle())
     }
 }
 
