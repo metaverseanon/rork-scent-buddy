@@ -85,7 +85,12 @@ final class SupabaseService {
         }
     }
 
-    func signUp(email: String, password: String) async throws -> SupabaseUser {
+    nonisolated struct SignUpResult: Sendable {
+        let user: SupabaseUser
+        let needsEmailConfirmation: Bool
+    }
+
+    func signUp(email: String, password: String) async throws -> SignUpResult {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else {
             throw SupabaseError.serverError("Service not configured. Please check your Supabase settings.")
         }
@@ -124,13 +129,13 @@ final class SupabaseService {
 
         let authResponse = try JSONDecoder().decode(SupabaseAuthResponse.self, from: data)
 
-        if let token = authResponse.access_token, let user = authResponse.user {
+        if let token = authResponse.access_token, !token.isEmpty, let user = authResponse.user {
             saveSession(token: token, refreshToken: authResponse.refresh_token, userId: user.id)
-            return user
+            return SignUpResult(user: user, needsEmailConfirmation: false)
         }
 
         if let user = authResponse.user {
-            return user
+            return SignUpResult(user: user, needsEmailConfirmation: true)
         }
 
         throw SupabaseError.serverError("Unexpected response from server")

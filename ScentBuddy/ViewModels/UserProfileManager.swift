@@ -47,16 +47,16 @@ final class UserProfileManager {
         successMessage = nil
 
         do {
-            let user = try await SupabaseService.shared.signUp(email: email, password: password)
+            let result = try await SupabaseService.shared.signUp(email: email, password: password)
 
-            guard SupabaseService.shared.isAuthenticated else {
-                successMessage = "Check your email to confirm your account, then sign in."
+            if result.needsEmailConfirmation {
+                successMessage = "Account created! Check your email to confirm, then sign in."
                 isLoading = false
                 return false
             }
 
             let profileInsert = SupabaseProfileInsert(
-                id: user.id,
+                id: result.user.id,
                 email: email,
                 display_name: displayName,
                 username: username,
