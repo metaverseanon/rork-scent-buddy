@@ -80,7 +80,8 @@ class PhotoScanViewModel {
                     topNotes: fragrance.topNotes,
                     heartNotes: fragrance.heartNotes,
                     baseNotes: fragrance.baseNotes,
-                    gender: ""
+                    gender: "",
+                    imageURL: fragrance.imageURL
                 )
                 if !seenIds.contains(entry.id) {
                     seenIds.insert(entry.id)
@@ -143,7 +144,8 @@ class PhotoScanViewModel {
                 topNotes: fragrance.topNotes,
                 heartNotes: fragrance.heartNotes,
                 baseNotes: fragrance.baseNotes,
-                gender: ""
+                gender: "",
+                imageURL: fragrance.imageURL
             )
         }
 

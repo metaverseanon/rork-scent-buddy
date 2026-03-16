@@ -9,6 +9,7 @@ nonisolated struct PerfumeEntry: Sendable, Identifiable {
     let heartNotes: [String]
     let baseNotes: [String]
     let gender: String
+    let imageURL: String?
 
     var displayName: String { "\(name) — \(brand)" }
     var allNotes: [String] { topNotes + heartNotes + baseNotes }

@@ -189,27 +189,40 @@ struct PerfumeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(perfumeGradient)
-                    .frame(height: 140)
-                    .overlay {
-                        Image(systemName: "drop.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.white.opacity(0.3))
+            Color(.secondarySystemBackground)
+                .frame(height: 140)
+                .overlay {
+                    if let urlString = perfume.imageURL, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            if let image = phase.image {
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } else if phase.error != nil {
+                                gradientFallback
+                            } else {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+                        .allowsHitTesting(false)
+                    } else {
+                        gradientFallback
                     }
-
-                if perfume.isFavorite {
-                    Image(systemName: "heart.fill")
-                        .font(.caption)
-                        .foregroundStyle(.pink)
-                        .padding(6)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                        .padding(8)
-                        .transition(.scale.combined(with: .opacity))
                 }
-            }
+                .clipShape(.rect(cornerRadius: 14))
+                .overlay(alignment: .topTrailing) {
+                    if perfume.isFavorite {
+                        Image(systemName: "heart.fill")
+                            .font(.caption)
+                            .foregroundStyle(.pink)
+                            .padding(6)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                            .padding(8)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(perfume.name)
@@ -225,6 +238,16 @@ struct PerfumeCard: View {
         }
         .background(AppearanceManager.shared.theme.cardColor)
         .clipShape(.rect(cornerRadius: 16))
+    }
+
+    private var gradientFallback: some View {
+        Rectangle()
+            .fill(perfumeGradient)
+            .overlay {
+                Image(systemName: "drop.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.white.opacity(0.3))
+            }
     }
 
     private var perfumeGradient: LinearGradient {

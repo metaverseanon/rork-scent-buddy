@@ -89,20 +89,7 @@ struct WishlistCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [.pink.opacity(0.6), .purple.opacity(0.4)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 56, height: 56)
-                    .overlay {
-                        Image(systemName: "heart.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
+                PerfumeThumb(url: item.imageURL, size: 56)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {

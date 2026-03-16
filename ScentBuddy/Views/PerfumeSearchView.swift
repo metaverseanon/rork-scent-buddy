@@ -102,34 +102,39 @@ struct PerfumeSearchView: View {
                                 topNotes: fragrance.topNotes,
                                 heartNotes: fragrance.heartNotes,
                                 baseNotes: fragrance.baseNotes,
-                                gender: ""
+                                gender: "",
+                                imageURL: fragrance.imageURL
                             )
                             onSelect(entry)
                             dismiss()
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(fragrance.name)
-                                        .font(.body)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                    Text(fragrance.concentration)
-                                        .font(.caption)
+                            HStack(spacing: 12) {
+                                PerfumeThumb(url: fragrance.imageURL, size: 48)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(fragrance.name)
+                                            .font(.body)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Text(fragrance.concentration)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 2)
+                                            .background(Color(.tertiarySystemFill))
+                                            .clipShape(Capsule())
+                                    }
+                                    Text(fragrance.brand)
+                                        .font(.subheadline)
                                         .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 2)
-                                        .background(Color(.tertiarySystemFill))
-                                        .clipShape(Capsule())
-                                }
-                                Text(fragrance.brand)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                if !fragrance.allNotes.isEmpty {
-                                    Text(fragrance.allNotes.prefix(5).joined(separator: " · "))
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                        .lineLimit(1)
+                                    if !fragrance.allNotes.isEmpty {
+                                        Text(fragrance.allNotes.prefix(5).joined(separator: " · "))
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                            .lineLimit(1)
+                                    }
                                 }
                             }
                             .padding(.vertical, 2)

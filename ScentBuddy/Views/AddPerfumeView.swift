@@ -23,6 +23,7 @@ struct AddPerfumeView: View {
     @State private var showingBaseNotePicker: Bool = false
     @State private var showingPerfumeSearch: Bool = false
     @State private var autoFilled: Bool = false
+    @State private var imageURL: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -158,6 +159,7 @@ struct AddPerfumeView: View {
         topNotes = entry.topNotes
         heartNotes = entry.heartNotes
         baseNotes = entry.baseNotes
+        imageURL = entry.imageURL
         autoFilled = true
     }
 
@@ -168,6 +170,7 @@ struct AddPerfumeView: View {
         topNotes = []
         heartNotes = []
         baseNotes = []
+        imageURL = nil
         autoFilled = false
     }
 
@@ -221,6 +224,7 @@ struct AddPerfumeView: View {
         let perfume = Perfume(
             name: trimmedName,
             brand: trimmedBrand,
+            imageURL: imageURL,
             concentration: concentration,
             topNotes: topNotes,
             heartNotes: heartNotes,
@@ -243,7 +247,7 @@ struct AddPerfumeView: View {
                 user_id: userId,
                 perfume_name: name,
                 perfume_brand: brand,
-                image_url: nil,
+                image_url: imageURL,
                 concentration: concentration,
                 top_notes: topNotes,
                 heart_notes: heartNotes,

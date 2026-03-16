@@ -15,6 +15,7 @@ struct AddWishlistView: View {
     @State private var showingNotePicker: Bool = false
     @State private var showingPerfumeSearch: Bool = false
     @State private var autoFilled: Bool = false
+    @State private var imageURL: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -155,6 +156,7 @@ struct AddWishlistView: View {
         concentration = PerfumeConstants.concentrations.contains(entry.concentration)
             ? entry.concentration : "Eau de Parfum"
         notes = entry.allNotes
+        imageURL = entry.imageURL
         autoFilled = true
     }
 
@@ -163,6 +165,7 @@ struct AddWishlistView: View {
         brand = ""
         concentration = "Eau de Parfum"
         notes = []
+        imageURL = nil
         autoFilled = false
     }
 
@@ -174,6 +177,7 @@ struct AddWishlistView: View {
         let item = WishlistPerfume(
             name: trimmedName,
             brand: trimmedBrand,
+            imageURL: imageURL,
             concentration: concentration,
             notes: notes,
             estimatedPrice: trimmedPrice,
@@ -192,7 +196,7 @@ struct AddWishlistView: View {
                 user_id: userId,
                 perfume_name: name,
                 perfume_brand: brand,
-                image_url: nil,
+                image_url: imageURL,
                 concentration: concentration,
                 notes: notes,
                 estimated_price: price,

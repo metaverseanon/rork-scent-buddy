@@ -180,6 +180,7 @@ struct PhotoScanView: View {
         let perfume = Perfume(
             name: entry.name,
             brand: entry.brand,
+            imageURL: entry.imageURL,
             concentration: PerfumeConstants.concentrations.contains(entry.concentration)
                 ? entry.concentration : "Eau de Parfum",
             topNotes: entry.topNotes,
@@ -200,14 +201,7 @@ struct ScanMatchCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardGradient)
-                .frame(width: 50, height: 50)
-                .overlay {
-                    Image(systemName: "drop.fill")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.5))
-                }
+            PerfumeThumb(url: entry.imageURL, size: 50)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.name)
@@ -242,16 +236,6 @@ struct ScanMatchCard: View {
         .clipShape(.rect(cornerRadius: 14))
     }
 
-    private var cardGradient: LinearGradient {
-        let hash = abs(entry.name.hashValue)
-        let gradients: [LinearGradient] = [
-            LinearGradient(colors: [.purple.opacity(0.7), .indigo.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.pink.opacity(0.6), .orange.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.blue.opacity(0.6), .teal.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.orange.opacity(0.7), .red.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-        ]
-        return gradients[hash % gradients.count]
-    }
 }
 
 struct ScanTipRow: View {

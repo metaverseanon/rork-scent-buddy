@@ -72,41 +72,72 @@ struct PerfumeDetailView: View {
     }
 
     private var headerSection: some View {
-        ZStack(alignment: .bottomLeading) {
-            LinearGradient(
-                colors: [headerColor.opacity(0.8), headerColor.opacity(0.4)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .frame(height: 220)
+        Color.clear
+            .frame(height: 260)
             .overlay {
-                Image(systemName: "drop.fill")
-                    .font(.system(size: 60))
-                    .foregroundStyle(.white.opacity(0.15))
-                    .scaleEffect(headerAppeared ? 1.0 : 0.5)
-                    .opacity(headerAppeared ? 1.0 : 0)
-                    .animation(.spring(duration: 0.8, bounce: 0.3).delay(0.1), value: headerAppeared)
+                if let urlString = perfume.imageURL, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else if phase.error != nil {
+                            gradientHeader
+                        } else {
+                            gradientHeader
+                                .overlay { ProgressView().tint(.white) }
+                        }
+                    }
+                    .allowsHitTesting(false)
+                } else {
+                    gradientHeader
+                }
+            }
+            .overlay {
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.6)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+            }
+            .clipShape(.rect)
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 4) {
+                    if perfume.isFavorite {
+                        Label("Favorite", systemImage: "heart.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(.pink.opacity(0.8))
+                            .clipShape(Capsule())
+                    }
+                    Text(perfume.brand)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.8))
+                    Text(perfume.name)
+                        .font(.title.bold())
+                        .foregroundStyle(.white)
+                }
+                .padding(20)
             }
             .onAppear { headerAppeared = true }
+    }
 
-            VStack(alignment: .leading, spacing: 4) {
-                if perfume.isFavorite {
-                    Label("Favorite", systemImage: "heart.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(.pink.opacity(0.8))
-                        .clipShape(Capsule())
-                }
-                Text(perfume.brand)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.8))
-                Text(perfume.name)
-                    .font(.title.bold())
-                    .foregroundStyle(.white)
-            }
-            .padding(20)
+    private var gradientHeader: some View {
+        LinearGradient(
+            colors: [headerColor.opacity(0.8), headerColor.opacity(0.4)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .overlay {
+            Image(systemName: "drop.fill")
+                .font(.system(size: 60))
+                .foregroundStyle(.white.opacity(0.15))
+                .scaleEffect(headerAppeared ? 1.0 : 0.5)
+                .opacity(headerAppeared ? 1.0 : 0)
+                .animation(.spring(duration: 0.8, bounce: 0.3).delay(0.1), value: headerAppeared)
         }
     }
 
