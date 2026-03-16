@@ -31,6 +31,7 @@ struct ContentView: View {
             }
             if SupabaseService.shared.isAuthenticated {
                 await UserProfileManager.shared.refreshProfile()
+                await notificationManager.ensureNotificationPermission()
                 notificationManager.startPolling()
             }
         }

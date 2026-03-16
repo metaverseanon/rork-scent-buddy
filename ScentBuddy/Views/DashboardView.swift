@@ -85,7 +85,6 @@ struct DashboardView: View {
             )
             syncExistingCollectionToCloud()
             await notificationManager.refreshUnreadCount()
-            await notificationManager.checkAndSendPushNotifications()
         }
     }
 
@@ -217,6 +216,13 @@ struct DashboardView: View {
                 title: "Community",
                 subtitle: "Follow others",
                 gradient: [.purple, .pink]
+            )
+            FeatureTile(
+                destination: PhotoScanView(),
+                icon: "camera.viewfinder",
+                title: "Scanner",
+                subtitle: "Identify scents",
+                gradient: [.cyan, .blue]
             )
             FeatureTile(
                 destination: CollectionCardView(),

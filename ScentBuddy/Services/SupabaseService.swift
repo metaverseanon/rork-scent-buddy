@@ -878,10 +878,22 @@ final class SupabaseService {
 
     func insertNotification(_ notification: AppNotificationInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
+        await refreshTokenIfNeeded()
         guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications") else { return }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(notification)
-        _ = try? await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse {
+            if http.statusCode == 401 {
+                await refreshTokenIfNeeded()
+                var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+                retryRequest.httpBody = try JSONEncoder().encode(notification)
+                _ = try? await URLSession.shared.data(for: retryRequest)
+            } else if http.statusCode >= 400 {
+                let bodyStr = String(data: data, encoding: .utf8) ?? ""
+                print("[SupabaseService] Notification insert failed (\(http.statusCode)): \(bodyStr)")
+            }
+        }
     }
 
     func markNotificationsRead(userId: String) async throws {

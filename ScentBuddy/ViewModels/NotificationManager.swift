@@ -11,16 +11,32 @@ final class NotificationManager {
 
     private let supabase = SupabaseService.shared
     private var profileCache: [String: SupabaseProfile] = [:]
-    private let lastCheckedKey = "last_notification_check_id"
+    private let lastCheckedKey = "last_notification_check_ts"
     private var pollingTask: Task<Void, Never>?
+    private var hasRequestedPermission: Bool = false
 
     private init() {}
+
+    func ensureNotificationPermission() async {
+        guard !hasRequestedPermission else { return }
+        hasRequestedPermission = true
+
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        if settings.authorizationStatus == .notDetermined {
+            let granted = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+            print("[NotificationManager] Permission requested, granted: \(granted ?? false)")
+        }
+    }
 
     func startPolling() {
         stopPolling()
         pollingTask = Task {
+            await ensureNotificationPermission()
+            await refreshUnreadCount()
+            await checkAndSendPushNotifications()
+
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(15))
                 guard !Task.isCancelled else { break }
                 await refreshUnreadCount()
                 await checkAndSendPushNotifications()
@@ -56,7 +72,8 @@ final class NotificationManager {
     func refreshUnreadCount() async {
         guard let userId = supabase.currentUserId else { return }
         do {
-            unreadCount = try await supabase.fetchUnreadNotificationCount(userId: userId)
+            let count = try await supabase.fetchUnreadNotificationCount(userId: userId)
+            unreadCount = count
         } catch {
             print("[NotificationManager] Failed to refresh count: \(error)")
         }
@@ -66,27 +83,40 @@ final class NotificationManager {
         guard let userId = supabase.currentUserId else { return }
 
         let settings = await UNUserNotificationCenter.current().notificationSettings()
-        guard settings.authorizationStatus == .authorized else { return }
+        guard settings.authorizationStatus == .authorized else {
+            if settings.authorizationStatus == .notDetermined {
+                await ensureNotificationPermission()
+            }
+            return
+        }
 
         do {
             let recent = try await supabase.fetchNotifications(userId: userId)
-            let lastCheckedId = UserDefaults.standard.string(forKey: lastCheckedKey)
+            guard !recent.isEmpty else { return }
+
+            let lastCheckedTs = UserDefaults.standard.string(forKey: lastCheckedKey)
 
             let newNotifications: [AppNotification]
-            if let lastId = lastCheckedId, let lastIndex = recent.firstIndex(where: { $0.id == lastId }) {
-                newNotifications = Array(recent[..<lastIndex])
-            } else if lastCheckedId != nil {
-                newNotifications = recent.filter { $0.is_read != true }
+            if let lastTs = lastCheckedTs {
+                newNotifications = recent.filter { notification in
+                    guard let createdAt = notification.created_at else { return false }
+                    return createdAt > lastTs && notification.is_read != true
+                }
             } else {
-                newNotifications = recent.filter { $0.is_read != true }
+                newNotifications = []
+                print("[NotificationManager] First run, setting baseline timestamp")
             }
 
-            if let firstId = recent.first?.id {
-                UserDefaults.standard.set(firstId, forKey: lastCheckedKey)
+            if let newestTs = recent.first?.created_at {
+                UserDefaults.standard.set(newestTs, forKey: lastCheckedKey)
             }
 
             for notification in newNotifications.prefix(5) {
                 await sendLocalPush(for: notification)
+            }
+
+            if !newNotifications.isEmpty {
+                unreadCount = recent.filter { $0.is_read != true }.count
             }
         } catch {
             print("[NotificationManager] Push check failed: \(error)")

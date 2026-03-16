@@ -1,15 +1,15 @@
 import Foundation
 
 nonisolated struct AppNotification: Codable, Sendable, Identifiable {
-    let id: String
-    let user_id: String
-    let from_user_id: String
-    let notification_type: String
-    let message: String?
-    let perfume_name: String?
-    let perfume_brand: String?
-    let is_read: Bool?
-    let created_at: String?
+    var id: String
+    var user_id: String
+    var from_user_id: String
+    var notification_type: String
+    var message: String?
+    var perfume_name: String?
+    var perfume_brand: String?
+    var is_read: Bool?
+    var created_at: String?
 
     nonisolated enum CodingKeys: String, CodingKey {
         case id, user_id, from_user_id

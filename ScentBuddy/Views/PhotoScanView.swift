@@ -61,14 +61,24 @@ struct PhotoScanView: View {
             .frame(height: 320)
             .clipShape(.rect(cornerRadius: 20))
 
-            if viewModel.isProcessing {
+            if viewModel.isProcessing || viewModel.isSearching {
                 HStack(spacing: 8) {
                     ProgressView()
-                    Text("Analyzing image...")
+                    Text(viewModel.searchStatus.isEmpty ? "Analyzing image..." : viewModel.searchStatus)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 8)
+            } else if !viewModel.searchStatus.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.matchedPerfumes.isEmpty ? "magnifyingglass" : "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(viewModel.matchedPerfumes.isEmpty ? .secondary : .green)
+                    Text(viewModel.searchStatus)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
             }
         }
     }
@@ -90,15 +100,23 @@ struct PhotoScanView: View {
                 }
             }
 
+            Text("Tap a word to search for it")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+
             FlowLayout(spacing: 6) {
                 ForEach(viewModel.recognizedTexts, id: \.self) { text in
-                    Text(text)
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(.orange.opacity(0.12))
-                        .foregroundStyle(.orange)
-                        .clipShape(Capsule())
+                    Button {
+                        Task { await viewModel.searchWithText(text) }
+                    } label: {
+                        Text(text)
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(.orange.opacity(0.12))
+                            .foregroundStyle(.orange)
+                            .clipShape(Capsule())
+                    }
                 }
             }
         }
