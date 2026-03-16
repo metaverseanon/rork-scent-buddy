@@ -71,6 +71,12 @@ struct DashboardView: View {
         .navigationDestination(isPresented: $showNotifications) {
             NotificationsView()
         }
+        .onChange(of: notificationManager.shouldShowNotifications) { _, newValue in
+            if newValue {
+                showNotifications = true
+                notificationManager.shouldShowNotifications = false
+            }
+        }
         .task {
             scentOfTheDay = scentService.suggest(from: perfumes, wearEntries: wearEntries)
             withAnimation(.spring(duration: 0.7, bounce: 0.15)) {

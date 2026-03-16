@@ -8,6 +8,7 @@ final class NotificationManager {
     private(set) var notifications: [AppNotification] = []
     private(set) var unreadCount: Int = 0
     private(set) var isLoading: Bool = false
+    var shouldShowNotifications: Bool = false
 
     private let supabase = SupabaseService.shared
     private var profileCache: [String: SupabaseProfile] = [:]
@@ -133,6 +134,7 @@ final class NotificationManager {
 
         let content = UNMutableNotificationContent()
         content.sound = .default
+        content.categoryIdentifier = "SOCIAL_NOTIFICATION"
 
         switch notification.notification_type {
         case "follow":

@@ -75,6 +75,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let categoryIdentifier = response.notification.request.content.categoryIdentifier
+        let notificationId = response.notification.request.identifier
+
+        Task { @MainActor in
+            if categoryIdentifier == "WEAR_REMINDER" {
+                NotificationCenter.default.post(name: .navigateToTab, object: nil, userInfo: ["tab": AppTab.diary])
+            } else if categoryIdentifier == "WEEKLY_PICKS" {
+                NotificationCenter.default.post(name: .navigateToTab, object: nil, userInfo: ["tab": AppTab.home])
+            } else if notificationId.hasPrefix("social_") || categoryIdentifier == "SOCIAL_NOTIFICATION" {
+                NotificationCenter.default.post(name: .showNotifications, object: nil)
+            }
+        }
+
         completionHandler()
     }
 }

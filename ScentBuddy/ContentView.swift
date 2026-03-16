@@ -1,9 +1,18 @@
 import SwiftUI
 
+enum AppTab: Int, Hashable {
+    case home = 0
+    case collection = 1
+    case diary = 2
+    case wishlist = 3
+    case profile = 4
+}
+
 struct ContentView: View {
     @State private var onboardingManager = OnboardingManager.shared
     @State private var showSplash: Bool = true
     @State private var notificationManager = NotificationManager.shared
+    @State private var selectedTab: AppTab = .home
     @Environment(\.scenePhase) private var scenePhase
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
@@ -42,35 +51,45 @@ struct ContentView: View {
                 notificationManager.stopPolling()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToTab)) { notification in
+            if let tab = notification.userInfo?["tab"] as? AppTab {
+                selectedTab = tab
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showNotifications)) { _ in
+            selectedTab = .home
+            notificationManager.shouldShowNotifications = true
+        }
     }
 
     private var mainTabView: some View {
-        TabView {
-            Tab("Home", systemImage: "house.fill") {
+        TabView(selection: $selectedTab) {
+            Tab("Home", systemImage: "house.fill", value: .home) {
                 NavigationStack {
                     DashboardView()
                 }
             }
+            .badge(notificationManager.unreadCount)
 
-            Tab("Collection", systemImage: "square.grid.2x2.fill") {
+            Tab("Collection", systemImage: "square.grid.2x2.fill", value: .collection) {
                 NavigationStack {
                     CollectionView()
                 }
             }
 
-            Tab("Diary", systemImage: "book.fill") {
+            Tab("Diary", systemImage: "book.fill", value: .diary) {
                 NavigationStack {
                     WearDiaryView()
                 }
             }
 
-            Tab("Wishlist", systemImage: "heart.fill") {
+            Tab("Wishlist", systemImage: "heart.fill", value: .wishlist) {
                 NavigationStack {
                     WishlistView()
                 }
             }
 
-            Tab("Profile", systemImage: "person.fill") {
+            Tab("Profile", systemImage: "person.fill", value: .profile) {
                 NavigationStack {
                     ProfileView()
                 }
@@ -79,4 +98,9 @@ struct ContentView: View {
         .tint(theme.tintColor)
         .preferredColorScheme(theme.colorScheme)
     }
+}
+
+extension Notification.Name {
+    static let navigateToTab = Notification.Name("navigateToTab")
+    static let showNotifications = Notification.Name("showNotifications")
 }
