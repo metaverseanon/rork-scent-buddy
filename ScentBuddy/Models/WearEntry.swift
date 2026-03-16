@@ -12,6 +12,12 @@ class WearEntry {
     var notes: String
     var rating: Int
     var sprays: Int
+    var layeredPerfumeNames: [String]
+    var layeredPerfumeBrands: [String]
+
+    var isLayered: Bool {
+        !layeredPerfumeNames.isEmpty
+    }
 
     init(
         perfumeName: String,
@@ -21,7 +27,9 @@ class WearEntry {
         mood: String = "Confident",
         notes: String = "",
         rating: Int = 4,
-        sprays: Int = 3
+        sprays: Int = 3,
+        layeredPerfumeNames: [String] = [],
+        layeredPerfumeBrands: [String] = []
     ) {
         self.id = UUID()
         self.perfumeName = perfumeName
@@ -32,5 +40,7 @@ class WearEntry {
         self.notes = notes
         self.rating = rating
         self.sprays = sprays
+        self.layeredPerfumeNames = layeredPerfumeNames
+        self.layeredPerfumeBrands = layeredPerfumeBrands
     }
 }

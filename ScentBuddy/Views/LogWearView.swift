@@ -14,6 +14,9 @@ struct LogWearView: View {
     @State private var rating: Int = 4
     @State private var sprays: Int = 3
     @State private var searchText: String = ""
+    @State private var isLayering: Bool = false
+    @State private var layeredPerfumes: [Perfume] = []
+    @State private var layerSearchText: String = ""
 
     private let moods = ["Confident", "Romantic", "Fresh", "Cozy", "Energetic", "Relaxed", "Bold", "Elegant"]
 
@@ -21,6 +24,7 @@ struct LogWearView: View {
         NavigationStack {
             Form {
                 perfumeSection
+                layeringSection
                 detailsSection
                 moodSection
                 spraySection
@@ -243,6 +247,105 @@ struct LogWearView: View {
         }
     }
 
+    private var layeringSection: some View {
+        Section {
+            Toggle(isOn: $isLayering.animation(.snappy)) {
+                Label("Layering", systemImage: "square.stack.3d.up.fill")
+                    .font(.subheadline)
+            }
+            .sensoryFeedback(.selection, trigger: isLayering)
+
+            if isLayering {
+                if !layeredPerfumes.isEmpty {
+                    ForEach(layeredPerfumes) { lp in
+                        HStack(spacing: 10) {
+                            Image(systemName: "drop.fill")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                                .frame(width: 28, height: 28)
+                                .background(.orange.opacity(0.1))
+                                .clipShape(Circle())
+
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(lp.name)
+                                    .font(.subheadline)
+                                Text(lp.brand)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                withAnimation(.snappy) {
+                                    layeredPerfumes.removeAll { $0.id == lp.id }
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                let availablePerfumes = perfumes.filter { p in
+                    p.id != selectedPerfume?.id && !layeredPerfumes.contains(where: { $0.id == p.id })
+                }
+                let filteredLayer = layerSearchText.isEmpty ? availablePerfumes : availablePerfumes.filter {
+                    $0.name.localizedStandardContains(layerSearchText) ||
+                    $0.brand.localizedStandardContains(layerSearchText)
+                }
+
+                if !availablePerfumes.isEmpty {
+                    TextField("Search to add layer...", text: $layerSearchText)
+                        .textFieldStyle(.roundedBorder)
+
+                    ScrollView {
+                        LazyVStack(spacing: 4) {
+                            ForEach(filteredLayer) { perfume in
+                                Button {
+                                    withAnimation(.snappy) {
+                                        layeredPerfumes.append(perfume)
+                                        layerSearchText = ""
+                                    }
+                                    HapticManager.shared.lightTap()
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(.orange)
+                                            .frame(width: 28, height: 28)
+                                            .background(.orange.opacity(0.1))
+                                            .clipShape(Circle())
+
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            Text(perfume.name)
+                                                .font(.subheadline)
+                                            Text(perfume.brand)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 6)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 150)
+                }
+            }
+        } header: {
+            Text("Layering")
+        } footer: {
+            if isLayering {
+                Text("Add perfumes you're layering with your main scent")
+            }
+        }
+    }
+
     private func save() {
         guard let perfume = selectedPerfume else { return }
         let generator = UINotificationFeedbackGenerator()
@@ -255,7 +358,9 @@ struct LogWearView: View {
             mood: mood,
             notes: notes,
             rating: rating,
-            sprays: sprays
+            sprays: sprays,
+            layeredPerfumeNames: isLayering ? layeredPerfumes.map { $0.name } : [],
+            layeredPerfumeBrands: isLayering ? layeredPerfumes.map { $0.brand } : []
         )
         modelContext.insert(entry)
         dismiss()

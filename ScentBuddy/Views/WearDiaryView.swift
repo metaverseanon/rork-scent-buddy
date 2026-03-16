@@ -438,6 +438,16 @@ struct WearEntryRow: View {
                 Text(entry.perfumeBrand)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if entry.isLayered {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.stack.3d.up.fill")
+                            .font(.system(size: 9))
+                        Text("+ \(entry.layeredPerfumeNames.joined(separator: ", "))")
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.orange)
+                }
             }
 
             Spacer()
