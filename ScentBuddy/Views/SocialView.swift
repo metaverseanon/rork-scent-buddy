@@ -32,6 +32,7 @@ struct SocialView: View {
             HStack(spacing: 8) {
                 ForEach(SocialTab.allCases, id: \.self) { tab in
                     Button {
+                        HapticManager.shared.selection()
                         withAnimation(.snappy) { selectedTab = tab }
                     } label: {
                         HStack(spacing: 6) {

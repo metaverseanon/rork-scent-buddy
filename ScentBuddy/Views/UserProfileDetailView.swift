@@ -79,6 +79,7 @@ struct UserProfileDetailView: View {
 
             HStack(spacing: 12) {
                 Button {
+                    HapticManager.shared.mediumTap()
                     Task { await socialService.toggleFollow(user.id) }
                 } label: {
                     HStack(spacing: 6) {

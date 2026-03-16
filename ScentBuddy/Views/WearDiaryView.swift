@@ -235,6 +235,7 @@ struct WearDiaryView: View {
                         ))
                         .contextMenu {
                             Button(role: .destructive) {
+                                HapticManager.shared.warning()
                                 withAnimation(.spring(duration: 0.35, bounce: 0.2)) { modelContext.delete(entry) }
                             } label: {
                                 Label("Delete", systemImage: "trash")

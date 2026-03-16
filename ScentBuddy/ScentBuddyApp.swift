@@ -45,15 +45,54 @@ struct ScentBuddyApp: App {
         WindowGroup {
             ContentView()
                 .onOpenURL { url in
-                    Task {
-                        let handled = await SupabaseService.shared.handleMagicLinkURL(url)
-                        if handled {
-                            await UserProfileManager.shared.refreshProfile()
+                    if url.scheme == "scentbuddy" && url.host == "perfume" {
+                        handlePerfumeDeepLink(url)
+                    } else if url.scheme == "scentbuddy" && url.host == "profile" {
+                        handleProfileDeepLink(url)
+                    } else {
+                        Task {
+                            let handled = await SupabaseService.shared.handleMagicLinkURL(url)
+                            if handled {
+                                await UserProfileManager.shared.refreshProfile()
+                            }
                         }
                     }
                 }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    private func handlePerfumeDeepLink(_ url: URL) {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        let params = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+            item.value.map { (item.name, $0) }
+        })
+        if let name = params["name"], let brand = params["brand"] {
+            NotificationCenter.default.post(
+                name: .navigateToTab,
+                object: nil,
+                userInfo: ["tab": AppTab.collection]
+            )
+            NotificationCenter.default.post(
+                name: .deepLinkPerfume,
+                object: nil,
+                userInfo: ["name": name, "brand": brand]
+            )
+        }
+    }
+
+    private func handleProfileDeepLink(_ url: URL) {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        let params = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+            item.value.map { (item.name, $0) }
+        })
+        if params["id"] != nil {
+            NotificationCenter.default.post(
+                name: .navigateToTab,
+                object: nil,
+                userInfo: ["tab": AppTab.home]
+            )
+        }
     }
 }
 

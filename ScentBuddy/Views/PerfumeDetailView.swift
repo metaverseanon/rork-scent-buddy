@@ -10,6 +10,7 @@ struct PerfumeDetailView: View {
     @State private var showingLogWear: Bool = false
     @State private var showingWriteReview: Bool = false
     @State private var headerAppeared: Bool = false
+    @State private var isFavoriteToggled: Bool = false
 
     var body: some View {
         ScrollView {
@@ -23,37 +24,55 @@ struct PerfumeDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        withAnimation { perfume.isFavorite.toggle() }
-                    } label: {
-                        Label(
-                            perfume.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                            systemImage: perfume.isFavorite ? "heart.slash" : "heart"
-                        )
+                HStack(spacing: 12) {
+                    ShareLink(
+                        item: ShareService.shared.sharePerfumeText(
+                            name: perfume.name,
+                            brand: perfume.brand,
+                            rating: perfume.rating,
+                            notes: perfume.allNotes
+                        ),
+                        subject: Text(perfume.name),
+                        message: Text("Check out \(perfume.name) by \(perfume.brand)")
+                    ) {
+                        Image(systemName: "square.and.arrow.up")
                     }
-                    Button {
-                        showingLogWear = true
+
+                    Menu {
+                        Button {
+                            withAnimation { perfume.isFavorite.toggle() }
+                            isFavoriteToggled.toggle()
+                        } label: {
+                            Label(
+                                perfume.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                                systemImage: perfume.isFavorite ? "heart.slash" : "heart"
+                            )
+                        }
+                        Button {
+                            showingLogWear = true
+                        } label: {
+                            Label("Log Wear", systemImage: "calendar.badge.plus")
+                        }
+                        Button {
+                            showingEditSheet = true
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     } label: {
-                        Label("Log Wear", systemImage: "calendar.badge.plus")
+                        Image(systemName: "ellipsis.circle")
                     }
-                    Button {
-                        showingEditSheet = true
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    Button(role: .destructive) {
-                        showingDeleteConfirmation = true
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
+        .sensoryFeedback(.impact(weight: .medium), trigger: isFavoriteToggled)
         .confirmationDialog("Delete Perfume?", isPresented: $showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
+                HapticManager.shared.warning()
                 modelContext.delete(perfume)
                 dismiss()
             }

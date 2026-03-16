@@ -89,7 +89,7 @@ struct DashboardView: View {
                 scentOfTheDay: scentOfTheDay?.perfumeName,
                 scentOfTheDayBrand: scentOfTheDay?.perfumeBrand
             )
-            syncExistingCollectionToCloud()
+            SyncOptimizationService.shared.syncIfNeeded(perfumes: perfumes, wishlist: wishlist)
             await notificationManager.refreshUnreadCount()
         }
     }
@@ -237,65 +237,6 @@ struct DashboardView: View {
                 subtitle: "Show off",
                 gradient: [.indigo, .purple]
             )
-        }
-    }
-
-    private func syncExistingCollectionToCloud() {
-        guard let userId = SupabaseService.shared.currentUserId,
-              SupabaseService.shared.isAuthenticated else { return }
-
-        Task {
-            let existing = (try? await SupabaseService.shared.fetchUserCollection(userId: userId)) ?? []
-            let existingKeys = Set(existing.map { "\($0.perfume_name)|\($0.perfume_brand)" })
-
-            let unsynced = perfumes.filter { p in
-                !existingKeys.contains("\(p.name)|\(p.brand)")
-            }
-
-            for perfume in unsynced {
-                let item = UserCollectionInsert(
-                    user_id: userId,
-                    perfume_name: perfume.name,
-                    perfume_brand: perfume.brand,
-                    image_url: nil,
-                    concentration: perfume.concentration,
-                    top_notes: perfume.topNotes,
-                    heart_notes: perfume.heartNotes,
-                    base_notes: perfume.baseNotes,
-                    season: perfume.season,
-                    occasion: perfume.occasion,
-                    rating: perfume.rating,
-                    personal_notes: perfume.personalNotes,
-                    is_favorite: perfume.isFavorite
-                )
-                try? await SupabaseService.shared.insertCollectionItem(item)
-            }
-
-            let existingWish = (try? await SupabaseService.shared.fetchUserWishlist(userId: userId)) ?? []
-            let existingWishKeys = Set(existingWish.map { "\($0.perfume_name)|\($0.perfume_brand)" })
-
-            let unsyncedWish = wishlist.filter { w in
-                !existingWishKeys.contains("\(w.name)|\(w.brand)")
-            }
-
-            for item in unsyncedWish {
-                let insert = UserWishlistInsert(
-                    user_id: userId,
-                    perfume_name: item.name,
-                    perfume_brand: item.brand,
-                    image_url: nil,
-                    concentration: item.concentration,
-                    notes: item.notes,
-                    estimated_price: item.estimatedPrice,
-                    reason: item.reason,
-                    priority: item.priority
-                )
-                try? await SupabaseService.shared.insertWishlistItem(insert)
-            }
-
-            if !unsynced.isEmpty || !unsyncedWish.isEmpty {
-                print("Cloud sync: pushed \(unsynced.count) perfumes and \(unsyncedWish.count) wishlist items to Supabase")
-            }
         }
     }
 

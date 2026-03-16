@@ -97,10 +97,12 @@ struct ContentView: View {
         }
         .tint(theme.tintColor)
         .preferredColorScheme(theme.colorScheme)
+        .sensoryFeedback(.selection, trigger: selectedTab)
     }
 }
 
 extension Notification.Name {
     static let navigateToTab = Notification.Name("navigateToTab")
     static let showNotifications = Notification.Name("showNotifications")
+    static let deepLinkPerfume = Notification.Name("deepLinkPerfume")
 }
