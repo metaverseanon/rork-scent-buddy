@@ -73,7 +73,7 @@ struct PhotoScanView: View {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.matchedPerfumes.isEmpty ? "magnifyingglass" : "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(viewModel.matchedPerfumes.isEmpty ? .secondary : .green)
+                        .foregroundStyle(viewModel.matchedPerfumes.isEmpty ? Color.secondary : Color.green)
                     Text(viewModel.searchStatus)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
