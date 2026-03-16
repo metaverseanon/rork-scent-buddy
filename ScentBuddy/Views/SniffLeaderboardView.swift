@@ -159,6 +159,8 @@ struct SniffLeaderboardView: View {
         isLoading = true
         defer { isLoading = false }
 
+        await supabase.refreshTokenIfNeeded()
+
         do {
             let allSniffs = try await supabase.fetchAllSniffs()
 
@@ -185,7 +187,7 @@ struct SniffLeaderboardView: View {
             }
             leaderboardEntries = entries
         } catch {
-            leaderboardEntries = []
+            print("[SniffLeaderboard] Failed to load: \(error.localizedDescription)")
         }
     }
 }

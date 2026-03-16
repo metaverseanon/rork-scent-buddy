@@ -103,19 +103,24 @@ final class SocialService {
         errorMessage = nil
         defer { isLoading = false }
 
+        await supabase.refreshTokenIfNeeded()
+
         do {
             let profiles = try await supabase.fetchAllProfiles()
             let currentId = supabase.currentUserId
 
-            discoveredUsers = profiles
+            let newDiscovered = profiles
                 .filter { $0.id != currentId }
                 .map { SocialProfile(from: $0) }
 
             if let currentId {
                 let follows = try await supabase.fetchFollowing(userId: currentId)
-                followingIds = Set(follows.map { $0.following_id })
-                followingUsers = discoveredUsers.filter { followingIds.contains($0.id) }
+                let newFollowingIds = Set(follows.map { $0.following_id })
+                followingIds = newFollowingIds
+                followingUsers = newDiscovered.filter { newFollowingIds.contains($0.id) }
             }
+
+            discoveredUsers = newDiscovered
         } catch {
             errorMessage = error.localizedDescription
         }

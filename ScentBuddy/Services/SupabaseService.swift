@@ -467,23 +467,20 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?id=eq.\(userId)&select=*") else {
             throw SupabaseError.serverError("Invalid URL")
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
-
-        if let token = accessToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
-        }
-
+        let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { return nil }
 
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
-            return nil
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else { return nil }
+            let profiles = try JSONDecoder().decode([SupabaseProfile].self, from: retryData)
+            return profiles.first
         }
 
+        guard http.statusCode < 400 else { return nil }
         let profiles = try JSONDecoder().decode([SupabaseProfile].self, from: data)
         return profiles.first
     }
@@ -496,20 +493,21 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?select=*&order=created_at.desc") else {
             throw SupabaseError.serverError("Invalid URL")
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
 
-        if let token = accessToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                throw SupabaseError.serverError("Failed to fetch profiles")
+            }
+            return try JSONDecoder().decode([SupabaseProfile].self, from: retryData)
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+        guard http.statusCode < 400 else {
             throw SupabaseError.serverError("Failed to fetch profiles")
         }
 
@@ -524,20 +522,21 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(userId)&select=*") else {
             throw SupabaseError.serverError("Invalid URL")
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        let request = authenticatedRequest(url: url)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
 
-        if let token = accessToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                throw SupabaseError.serverError("Failed to fetch follows")
+            }
+            return try JSONDecoder().decode([SupabaseFollow].self, from: retryData)
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+        guard http.statusCode < 400 else {
             throw SupabaseError.serverError("Failed to fetch follows")
         }
 
@@ -552,24 +551,30 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/follows") else {
             throw SupabaseError.serverError("Invalid URL")
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
-        request.setValue("return=minimal", forHTTPHeaderField: "Prefer")
-
-        if let token = accessToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
-        }
-
         let body = SupabaseFollowInsert(follower_id: followerId, following_id: followingId)
-        request.httpBody = try JSONEncoder().encode(body)
+        let bodyData = try JSONEncoder().encode(body)
+
+        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+        request.httpBody = bodyData
 
         let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
 
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+            retryRequest.httpBody = bodyData
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: retryData) {
+                    throw SupabaseError.serverError(e.message ?? e.msg ?? "Failed to follow user")
+                }
+                throw SupabaseError.serverError("Failed to follow user")
+            }
+            return
+        }
+
+        guard http.statusCode < 400 else {
             if let errorResp = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
                 let message = errorResp.message ?? errorResp.msg ?? "Failed to follow user"
                 throw SupabaseError.serverError(message)
@@ -586,20 +591,21 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/follows?follower_id=eq.\(followerId)&following_id=eq.\(followingId)") else {
             throw SupabaseError.serverError("Invalid URL")
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
+        let request = authenticatedRequest(url: url, method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
 
-        if let token = accessToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        } else {
-            request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url, method: "DELETE")
+            let (_, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                throw SupabaseError.serverError("Failed to unfollow user")
+            }
+            return
         }
 
-        let (_, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode < 400 else {
+        guard http.statusCode < 400 else {
             throw SupabaseError.serverError("Failed to unfollow user")
         }
     }
@@ -778,7 +784,19 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/activity_feed?user_id=in.(\(ids))&select=*&order=created_at.desc&limit=50") else { return [] }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                throw SupabaseError.serverError("Failed to fetch activity feed")
+            }
+            return try JSONDecoder().decode([ActivityFeedItem].self, from: retryData)
+        }
+
+        guard http.statusCode < 400 else {
             throw SupabaseError.serverError("Failed to fetch activity feed")
         }
         return try JSONDecoder().decode([ActivityFeedItem].self, from: data)
@@ -812,14 +830,31 @@ final class SupabaseService {
     func sendNoseBump(_ bump: NoseBumpInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { throw SupabaseError.serverError("Supabase is not configured.") }
         guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs") else { throw SupabaseError.serverError("Invalid URL") }
+        let bodyData = try JSONEncoder().encode(bump)
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
-        request.httpBody = try JSONEncoder().encode(bump)
+        request.httpBody = bodyData
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else {
-            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
-                throw SupabaseError.serverError(e.message ?? "Failed to send nose bump")
+        guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
+            retryRequest.httpBody = bodyData
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
+                if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: retryData) {
+                    throw SupabaseError.serverError(e.message ?? "Failed to send sniff")
+                }
+                throw SupabaseError.serverError("Failed to send sniff")
             }
-            throw SupabaseError.serverError("Failed to send nose bump")
+            return
+        }
+
+        guard http.statusCode < 400 else {
+            if let e = try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data) {
+                throw SupabaseError.serverError(e.message ?? "Failed to send sniff")
+            }
+            throw SupabaseError.serverError("Failed to send sniff")
         }
     }
 
@@ -839,7 +874,17 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?target_user_id=eq.\(targetUserId)&select=*&order=created_at.desc") else { return [] }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        guard let http = response as? HTTPURLResponse else { return [] }
+
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else { return [] }
+            return try JSONDecoder().decode([NoseBump].self, from: retryData)
+        }
+
+        guard http.statusCode < 400 else { return [] }
         return try JSONDecoder().decode([NoseBump].self, from: data)
     }
 
@@ -872,7 +917,17 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&select=*&order=created_at.desc&limit=50") else { return [] }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        guard let http = response as? HTTPURLResponse else { return [] }
+
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else { return [] }
+            return try JSONDecoder().decode([AppNotification].self, from: retryData)
+        }
+
+        guard http.statusCode < 400 else { return [] }
         return try JSONDecoder().decode([AppNotification].self, from: data)
     }
 
@@ -961,7 +1016,17 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/sniffs?select=*&order=created_at.desc") else { return [] }
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return [] }
+        guard let http = response as? HTTPURLResponse else { return [] }
+
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            let retryRequest = authenticatedRequest(url: url)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else { return [] }
+            return try JSONDecoder().decode([NoseBump].self, from: retryData)
+        }
+
+        guard http.statusCode < 400 else { return [] }
         return try JSONDecoder().decode([NoseBump].self, from: data)
     }
 

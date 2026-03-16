@@ -42,6 +42,10 @@ struct ActivityFeedView: View {
         isLoading = true
         defer { isLoading = false }
 
+        if socialService.followingUsers.isEmpty {
+            await socialService.loadDiscoveredUsers()
+        }
+
         let followingIds = socialService.followingUsers.map { $0.id }
         guard !followingIds.isEmpty else { return }
 
