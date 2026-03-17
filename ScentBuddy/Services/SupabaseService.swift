@@ -525,6 +525,7 @@ final class SupabaseService {
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw SupabaseError.networkError }
+        print("[SupabaseService] fetchFollowing status: \(http.statusCode), bytes: \(data.count)")
 
         if http.statusCode == 401 {
             await refreshTokenIfNeeded()
@@ -533,14 +534,26 @@ final class SupabaseService {
             guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else {
                 throw SupabaseError.serverError("Failed to fetch follows")
             }
-            return try JSONDecoder().decode([SupabaseFollow].self, from: retryData)
+            do {
+                return try JSONDecoder().decode([SupabaseFollow].self, from: retryData)
+            } catch {
+                print("[SupabaseService] Follow decode error (retry): \(error)")
+                if let raw = String(data: retryData, encoding: .utf8)?.prefix(500) { print("[SupabaseService] Raw: \(raw)") }
+                return []
+            }
         }
 
         guard http.statusCode < 400 else {
             throw SupabaseError.serverError("Failed to fetch follows")
         }
 
-        return try JSONDecoder().decode([SupabaseFollow].self, from: data)
+        do {
+            return try JSONDecoder().decode([SupabaseFollow].self, from: data)
+        } catch {
+            print("[SupabaseService] Follow decode error: \(error)")
+            if let raw = String(data: data, encoding: .utf8)?.prefix(500) { print("[SupabaseService] Raw: \(raw)") }
+            return []
+        }
     }
 
     func followUser(followerId: String, followingId: String) async throws {
@@ -918,17 +931,30 @@ final class SupabaseService {
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { return [] }
+        print("[SupabaseService] fetchNotifications status: \(http.statusCode), bytes: \(data.count)")
 
         if http.statusCode == 401 {
             await refreshTokenIfNeeded()
             let retryRequest = authenticatedRequest(url: url)
             let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
             guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else { return [] }
-            return try JSONDecoder().decode([AppNotification].self, from: retryData)
+            do {
+                return try JSONDecoder().decode([AppNotification].self, from: retryData)
+            } catch {
+                print("[SupabaseService] Notification decode error (retry): \(error)")
+                if let raw = String(data: retryData, encoding: .utf8)?.prefix(500) { print("[SupabaseService] Raw: \(raw)") }
+                return []
+            }
         }
 
         guard http.statusCode < 400 else { return [] }
-        return try JSONDecoder().decode([AppNotification].self, from: data)
+        do {
+            return try JSONDecoder().decode([AppNotification].self, from: data)
+        } catch {
+            print("[SupabaseService] Notification decode error: \(error)")
+            if let raw = String(data: data, encoding: .utf8)?.prefix(500) { print("[SupabaseService] Raw: \(raw)") }
+            return []
+        }
     }
 
     func insertNotification(_ notification: AppNotificationInsert) async throws {
@@ -937,13 +963,19 @@ final class SupabaseService {
         guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications") else { return }
         var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
         request.httpBody = try JSONEncoder().encode(notification)
+        print("[SupabaseService] Inserting notification: \(notification.notification_type) for user \(notification.user_id)")
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse {
+            print("[SupabaseService] Notification insert status: \(http.statusCode)")
             if http.statusCode == 401 {
                 await refreshTokenIfNeeded()
                 var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
                 retryRequest.httpBody = try JSONEncoder().encode(notification)
-                _ = try? await URLSession.shared.data(for: retryRequest)
+                let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+                if let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode >= 400 {
+                    let bodyStr = String(data: retryData, encoding: .utf8) ?? ""
+                    print("[SupabaseService] Notification retry failed (\(retryHttp.statusCode)): \(bodyStr)")
+                }
             } else if http.statusCode >= 400 {
                 let bodyStr = String(data: data, encoding: .utf8) ?? ""
                 print("[SupabaseService] Notification insert failed (\(http.statusCode)): \(bodyStr)")
@@ -953,27 +985,47 @@ final class SupabaseService {
 
     func markNotificationsRead(userId: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&read=eq.false") else { return }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false") else { return }
         var request = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
-        let body: [String: Bool] = ["read": true]
+        let body: [String: Bool] = ["is_read": true]
         request.httpBody = try JSONEncoder().encode(body)
-        _ = try? await URLSession.shared.data(for: request)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            var retryRequest = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
+            retryRequest.httpBody = try JSONEncoder().encode(body)
+            _ = try? await URLSession.shared.data(for: retryRequest)
+        }
     }
 
     func fetchUnreadNotificationCount(userId: String) async throws -> Int {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return 0 }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&read=eq.false&select=id") else { return 0 }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false&select=id") else { return 0 }
         var request = authenticatedRequest(url: url)
         request.setValue("count=exact", forHTTPHeaderField: "Prefer")
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode < 400 else { return 0 }
+        guard let http = response as? HTTPURLResponse else { return 0 }
+        if http.statusCode == 401 {
+            await refreshTokenIfNeeded()
+            var retryRequest = authenticatedRequest(url: url)
+            retryRequest.setValue("count=exact", forHTTPHeaderField: "Prefer")
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else { return 0 }
+            if let range = retryHttp.value(forHTTPHeaderField: "Content-Range"),
+               let countStr = range.split(separator: "/").last,
+               let count = Int(countStr) {
+                return count
+            }
+            let retryItems = (try? JSONDecoder().decode([AppNotification].self, from: retryData)) ?? []
+            return retryItems.count
+        }
+        guard http.statusCode < 400 else { return 0 }
         if let range = http.value(forHTTPHeaderField: "Content-Range"),
            let countStr = range.split(separator: "/").last,
            let count = Int(countStr) {
             return count
         }
-        nonisolated struct IdOnly: Codable, Sendable { let id: String }
-        let items = (try? JSONDecoder().decode([IdOnly].self, from: data)) ?? []
+        let items = (try? JSONDecoder().decode([AppNotification].self, from: data)) ?? []
         return items.count
     }
 
@@ -1017,17 +1069,29 @@ final class SupabaseService {
         let request = authenticatedRequest(url: url)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { return [] }
+        print("[SupabaseService] fetchAllSniffs status: \(http.statusCode), bytes: \(data.count)")
 
         if http.statusCode == 401 {
             await refreshTokenIfNeeded()
             let retryRequest = authenticatedRequest(url: url)
             let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
             guard let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode < 400 else { return [] }
-            return try JSONDecoder().decode([NoseBump].self, from: retryData)
+            do {
+                return try JSONDecoder().decode([NoseBump].self, from: retryData)
+            } catch {
+                print("[SupabaseService] Sniffs decode error (retry): \(error)")
+                return []
+            }
         }
 
         guard http.statusCode < 400 else { return [] }
-        return try JSONDecoder().decode([NoseBump].self, from: data)
+        do {
+            return try JSONDecoder().decode([NoseBump].self, from: data)
+        } catch {
+            print("[SupabaseService] Sniffs decode error: \(error)")
+            if let raw = String(data: data, encoding: .utf8)?.prefix(500) { print("[SupabaseService] Raw: \(raw)") }
+            return []
+        }
     }
 
     func fetchNoseBumpCount(targetUserId: String, perfumeName: String, perfumeBrand: String) async throws -> Int {
@@ -1048,11 +1112,23 @@ nonisolated struct SupabaseFollowInsert: Encodable, Sendable {
     let following_id: String
 }
 
-nonisolated struct SupabaseFollow: Codable, Sendable {
+nonisolated struct SupabaseFollow: Sendable, Identifiable {
     let id: String
     let follower_id: String
     let following_id: String
     let created_at: String?
+}
+
+extension SupabaseFollow: Decodable {
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: FlexibleCodingKey.self)
+        let rawId = try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "id"))
+        let intId = try? container.decode(Int.self, forKey: FlexibleCodingKey(stringValue: "id"))
+        self.id = rawId ?? (intId.map { String($0) } ?? UUID().uuidString)
+        self.follower_id = (try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "follower_id"))) ?? ""
+        self.following_id = (try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "following_id"))) ?? ""
+        self.created_at = try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "created_at"))
+    }
 }
 
 nonisolated enum SupabaseError: LocalizedError, Sendable {

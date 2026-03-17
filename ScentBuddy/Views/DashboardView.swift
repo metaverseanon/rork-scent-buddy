@@ -336,14 +336,28 @@ struct RecentPerfumeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(perfumeGradient)
+            Color(.secondarySystemBackground)
                 .frame(width: 100, height: 80)
                 .overlay {
-                    Image(systemName: "drop.fill")
-                        .font(.title3)
-                        .foregroundStyle(.white.opacity(0.3))
+                    if let urlString = perfume.imageURL, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            if let image = phase.image {
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } else if phase.error != nil {
+                                gradientFallback
+                            } else {
+                                gradientFallback
+                                    .overlay { ProgressView().controlSize(.mini) }
+                            }
+                        }
+                        .allowsHitTesting(false)
+                    } else {
+                        gradientFallback
+                    }
                 }
+                .clipShape(.rect(cornerRadius: 12))
 
             Text(perfume.name)
                 .font(.caption.bold())
@@ -354,7 +368,16 @@ struct RecentPerfumeCard: View {
                 .lineLimit(1)
         }
         .frame(width: 100)
+    }
 
+    private var gradientFallback: some View {
+        Rectangle()
+            .fill(perfumeGradient)
+            .overlay {
+                Image(systemName: "drop.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white.opacity(0.3))
+            }
     }
 
     private var perfumeGradient: LinearGradient {

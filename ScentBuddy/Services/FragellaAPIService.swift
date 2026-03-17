@@ -99,7 +99,13 @@ final class FragellaAPIService {
                   let brand = dict["Brand"] as? String else { return nil }
 
             let concentration = (dict["OilType"] as? String) ?? "Eau de Parfum"
-            let imageURL = dict["Image URL"] as? String
+            let rawImageURL = dict["Image URL"] as? String
+                ?? dict["ImageURL"] as? String
+                ?? dict["image_url"] as? String
+                ?? dict["imageUrl"] as? String
+                ?? dict["Image"] as? String
+                ?? dict["image"] as? String
+            let imageURL = Self.sanitizeImageURL(rawImageURL)
             let year = dict["Year"] as? String
 
             var topNotes: [String] = []
@@ -150,6 +156,19 @@ final class FragellaAPIService {
 
             return aName.count < bName.count
         }
+    }
+
+    private static func sanitizeImageURL(_ raw: String?) -> String? {
+        guard var urlString = raw, !urlString.isEmpty else { return nil }
+        urlString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if urlString.hasPrefix("//") {
+            urlString = "https:" + urlString
+        }
+        if !urlString.hasPrefix("http://") && !urlString.hasPrefix("https://") {
+            urlString = "https://" + urlString
+        }
+        guard URL(string: urlString) != nil else { return nil }
+        return urlString
     }
 
     private func extractNoteNames(from value: Any?) -> [String] {

@@ -347,14 +347,7 @@ struct SniffableCollectionCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardGradient)
-                .frame(width: 52, height: 52)
-                .overlay {
-                    Image(systemName: "drop.fill")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
+            PerfumeThumb(url: item.image_url, size: 52)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.perfume_name)
@@ -413,16 +406,6 @@ struct SniffableCollectionCard: View {
         .clipShape(.rect(cornerRadius: 14))
     }
 
-    private var cardGradient: LinearGradient {
-        let hash = abs(item.perfume_name.hashValue)
-        let gradients: [LinearGradient] = [
-            LinearGradient(colors: [.purple.opacity(0.7), .indigo.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.pink.opacity(0.6), .orange.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.blue.opacity(0.6), .teal.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.orange.opacity(0.7), .red.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-        ]
-        return gradients[hash % gradients.count]
-    }
 }
 
 struct CollectionItemCard: View {
@@ -431,14 +414,7 @@ struct CollectionItemCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(cardGradient)
-                .frame(width: 52, height: 52)
-                .overlay {
-                    Image(systemName: "drop.fill")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
+            PerfumeThumb(url: item.image_url, size: 52)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.perfume_name)
@@ -474,16 +450,6 @@ struct CollectionItemCard: View {
         .clipShape(.rect(cornerRadius: 14))
     }
 
-    private var cardGradient: LinearGradient {
-        let hash = abs(item.perfume_name.hashValue)
-        let gradients: [LinearGradient] = [
-            LinearGradient(colors: [.purple.opacity(0.7), .indigo.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.pink.opacity(0.6), .orange.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.blue.opacity(0.6), .teal.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.orange.opacity(0.7), .red.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing),
-        ]
-        return gradients[hash % gradients.count]
-    }
 }
 
 struct WishlistItemCard: View {
@@ -494,14 +460,7 @@ struct WishlistItemCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(LinearGradient(colors: [.pink.opacity(0.5), .purple.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 52, height: 52)
-                .overlay {
-                    Image(systemName: "heart.fill")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
+            PerfumeThumb(url: item.image_url, size: 52)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.perfume_name)

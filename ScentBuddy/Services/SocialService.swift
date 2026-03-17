@@ -108,6 +108,7 @@ final class SocialService {
         do {
             let profiles = try await supabase.fetchAllProfiles()
             let currentId = supabase.currentUserId
+            print("[SocialService] Fetched \(profiles.count) profiles, currentId: \(currentId ?? "nil")")
 
             let newDiscovered = profiles
                 .filter { $0.id != currentId }
@@ -115,13 +116,16 @@ final class SocialService {
 
             if let currentId {
                 let follows = try await supabase.fetchFollowing(userId: currentId)
+                print("[SocialService] Fetched \(follows.count) follows")
                 let newFollowingIds = Set(follows.map { $0.following_id })
                 followingIds = newFollowingIds
                 followingUsers = newDiscovered.filter { newFollowingIds.contains($0.id) }
+                print("[SocialService] followingUsers count: \(followingUsers.count)")
             }
 
             discoveredUsers = newDiscovered
         } catch {
+            print("[SocialService] Error loading users: \(error)")
             errorMessage = error.localizedDescription
         }
     }

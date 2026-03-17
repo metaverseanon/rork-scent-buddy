@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated struct AppNotification: Codable, Sendable, Identifiable {
+nonisolated struct AppNotification: Sendable, Identifiable {
     var id: String
     var user_id: String
     var from_user_id: String
@@ -10,15 +10,30 @@ nonisolated struct AppNotification: Codable, Sendable, Identifiable {
     var perfume_brand: String?
     var is_read: Bool?
     var created_at: String?
+}
 
-    nonisolated enum CodingKeys: String, CodingKey {
-        case id, user_id, from_user_id
-        case notification_type = "type"
-        case message
-        case perfume_name, perfume_brand
-        case is_read = "read"
-        case created_at
+extension AppNotification: Decodable {
+    nonisolated init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: FlexibleCodingKey.self)
+        let rawId = try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "id"))
+        let intId = try? container.decode(Int.self, forKey: FlexibleCodingKey(stringValue: "id"))
+        self.id = rawId ?? (intId.map { String($0) } ?? UUID().uuidString)
+        self.user_id = (try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "user_id"))) ?? ""
+        self.from_user_id = (try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "from_user_id"))) ?? ""
+        self.notification_type = (try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "notification_type"))) ?? (try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "type"))) ?? ""
+        self.message = try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "message"))
+        self.perfume_name = try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "perfume_name"))
+        self.perfume_brand = try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "perfume_brand"))
+        self.is_read = (try? container.decode(Bool.self, forKey: FlexibleCodingKey(stringValue: "is_read"))) ?? (try? container.decode(Bool.self, forKey: FlexibleCodingKey(stringValue: "read")))
+        self.created_at = try? container.decode(String.self, forKey: FlexibleCodingKey(stringValue: "created_at"))
     }
+}
+
+nonisolated struct FlexibleCodingKey: CodingKey, Sendable {
+    var stringValue: String
+    var intValue: Int?
+    init(stringValue: String) { self.stringValue = stringValue; self.intValue = nil }
+    init?(intValue: Int) { self.stringValue = String(intValue); self.intValue = intValue }
 }
 
 nonisolated struct AppNotificationInsert: Encodable, Sendable {
@@ -28,11 +43,4 @@ nonisolated struct AppNotificationInsert: Encodable, Sendable {
     let message: String?
     let perfume_name: String?
     let perfume_brand: String?
-
-    nonisolated enum CodingKeys: String, CodingKey {
-        case user_id, from_user_id
-        case notification_type = "type"
-        case message
-        case perfume_name, perfume_brand
-    }
 }
