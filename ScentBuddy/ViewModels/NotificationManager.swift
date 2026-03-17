@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 
 @Observable
@@ -173,7 +174,7 @@ final class NotificationManager {
                 notifications[i].is_read = true
             }
             unreadCount = 0
-            UNUserNotificationCenter.current().setBadgeCount(0)
+            try await UNUserNotificationCenter.current().setBadgeCount(0)
         } catch {
             print("[NotificationManager] Failed to mark read: \(error)")
         }
