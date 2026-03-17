@@ -7,13 +7,18 @@ struct RecommendationsView: View {
     @State private var recommendations: [RecommendedPerfume] = []
     @State private var isLoading: Bool = true
 
-    private let service = RecommendationService()
+    @State private var service = RecommendationService()
 
     var body: some View {
         ScrollView {
             if isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, minHeight: 300)
+                VStack(spacing: 16) {
+                    ProgressView()
+                    Text("Finding fragrances for you...")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 300)
             } else if recommendations.isEmpty {
                 emptyState
             } else {
@@ -85,8 +90,7 @@ struct RecommendationsView: View {
 
     private func loadRecommendations() async {
         isLoading = true
-        try? await Task.sleep(for: .milliseconds(500))
-        let allRecs = service.generateRecommendations(from: perfumes, wearEntries: wearEntries)
+        let allRecs = await service.generateRecommendations(from: perfumes, wearEntries: wearEntries)
         recommendations = allRecs.filter { rec in
             !perfumes.contains { perfume in
                 let recName = rec.name.lowercased().trimmingCharacters(in: .whitespaces)
@@ -112,14 +116,7 @@ struct RecommendationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(cardGradient)
-                    .frame(width: 60, height: 60)
-                    .overlay {
-                        Image(systemName: "drop.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
+                PerfumeThumb(url: recommendation.imageURL, size: 64)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -180,7 +177,6 @@ struct RecommendationCard: View {
                             .font(.caption.bold())
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption2)
-                            .rotationEffect(.degrees(isExpanded ? 0 : 0))
                     }
                     .foregroundStyle(.tint)
                 }
@@ -224,16 +220,5 @@ struct RecommendationCard: View {
         )
         modelContext.insert(item)
         withAnimation(.snappy) { justAdded = true }
-    }
-
-    private var cardGradient: LinearGradient {
-        let hash = abs(recommendation.name.hashValue)
-        let gradients: [LinearGradient] = [
-            LinearGradient(colors: [.purple, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.pink, .orange], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.blue, .teal], startPoint: .topLeading, endPoint: .bottomTrailing),
-            LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing),
-        ]
-        return gradients[hash % gradients.count]
     }
 }
