@@ -110,7 +110,7 @@ struct SniffLeaderboardView: View {
             Spacer()
 
             HStack(spacing: 4) {
-                Text("👃")
+                Text("\u{1F443}")
                     .font(.caption)
                 Text("\(entry.sniffCount)")
                     .font(.subheadline.bold())
@@ -137,9 +137,9 @@ struct SniffLeaderboardView: View {
 
     private func rankMedal(rank: Int) -> String {
         switch rank {
-        case 1: return "🥇"
-        case 2: return "🥈"
-        case 3: return "🥉"
+        case 1: return "\u{1F947}"
+        case 2: return "\u{1F948}"
+        case 3: return "\u{1F949}"
         default: return ""
         }
     }
@@ -163,6 +163,12 @@ struct SniffLeaderboardView: View {
 
         do {
             let allSniffs = try await supabase.fetchAllSniffs()
+            print("[SniffLeaderboard] Fetched \(allSniffs.count) total sniffs")
+
+            guard !allSniffs.isEmpty else {
+                print("[SniffLeaderboard] No sniffs found")
+                return
+            }
 
             var sniffsByUser: [String: Int] = [:]
             for sniff in allSniffs {
@@ -185,6 +191,7 @@ struct SniffLeaderboardView: View {
                     sniffCount: sniffsByUser[userId] ?? 0
                 ))
             }
+            print("[SniffLeaderboard] Built \(entries.count) leaderboard entries")
             leaderboardEntries = entries
         } catch {
             print("[SniffLeaderboard] Failed to load: \(error.localizedDescription)")

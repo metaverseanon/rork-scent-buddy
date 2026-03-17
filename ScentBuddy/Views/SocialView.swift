@@ -22,6 +22,9 @@ struct SocialView: View {
         .background(theme.backgroundColor)
         .navigationTitle("Community")
         .searchable(text: $searchText, prompt: "Search users...")
+        .refreshable {
+            await socialService.loadDiscoveredUsers()
+        }
         .task {
             await socialService.loadDiscoveredUsers()
         }
@@ -74,6 +77,13 @@ struct SocialView: View {
                     if socialService.isLoading {
                         ProgressView()
                             .frame(maxWidth: .infinity, minHeight: 200)
+                    } else if filteredDiscoverUsers.isEmpty {
+                        ContentUnavailableView {
+                            Label("No Users Found", systemImage: "person.2.slash")
+                        } description: {
+                            Text("No fragrance enthusiasts found. Pull to refresh.")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 300)
                     } else {
                         ForEach(filteredDiscoverUsers) { user in
                             NavigationLink(value: user.id) {

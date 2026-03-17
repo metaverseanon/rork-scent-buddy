@@ -22,7 +22,6 @@ struct ActivityFeedView: View {
                         FeedItemCard(item: item, profile: profileCache[item.user_id])
                     }
                 }
-                .padding(.horizontal)
                 .padding(.bottom, 20)
             }
         }
@@ -42,18 +41,48 @@ struct ActivityFeedView: View {
         isLoading = true
         defer { isLoading = false }
 
-        if socialService.followingUsers.isEmpty {
+        await supabase.refreshTokenIfNeeded()
+
+        if !socialService.hasLoaded {
             await socialService.loadDiscoveredUsers()
         }
 
-        let followingIds = socialService.followingUsers.map { $0.id }
-        guard !followingIds.isEmpty else { return }
+        var userIdsToFetch: [String] = []
+
+        let followingIds = socialService.getFollowingUserIds()
+        if !followingIds.isEmpty {
+            userIdsToFetch = followingIds
+        }
+
+        if let currentId = supabase.currentUserId, !userIdsToFetch.contains(currentId) {
+            userIdsToFetch.append(currentId)
+        }
+
+        if userIdsToFetch.isEmpty {
+            userIdsToFetch = socialService.getAllUserIds()
+        }
 
         for user in socialService.followingUsers {
             profileCache[user.id] = user
         }
+        for user in socialService.discoveredUsers {
+            profileCache[user.id] = user
+        }
 
-        feedItems = (try? await supabase.fetchActivityFeed(userIds: followingIds)) ?? []
+        guard !userIdsToFetch.isEmpty else {
+            print("[ActivityFeed] No user IDs to fetch feed for")
+            return
+        }
+
+        print("[ActivityFeed] Fetching feed for \(userIdsToFetch.count) users")
+
+        do {
+            feedItems = try await supabase.fetchActivityFeed(userIds: userIdsToFetch)
+            print("[ActivityFeed] Got \(feedItems.count) feed items")
+        } catch {
+            print("[ActivityFeed] Failed to load: \(error)")
+            feedItems = []
+        }
     }
 }
 

@@ -40,6 +40,7 @@ final class SocialService {
     private(set) var followingUsers: [SocialProfile] = []
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
+    private(set) var hasLoaded: Bool = false
 
     private var followingIds: Set<String> = []
 
@@ -99,9 +100,17 @@ final class SocialService {
     }
 
     func loadDiscoveredUsers() async {
+        guard supabase.isAuthenticated else {
+            print("[SocialService] Not authenticated, skipping load")
+            return
+        }
+
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasLoaded = true
+        }
 
         await supabase.refreshTokenIfNeeded()
 
@@ -116,11 +125,11 @@ final class SocialService {
 
             if let currentId {
                 let follows = try await supabase.fetchFollowing(userId: currentId)
-                print("[SocialService] Fetched \(follows.count) follows")
+                print("[SocialService] Fetched \(follows.count) follows for user \(currentId)")
                 let newFollowingIds = Set(follows.map { $0.following_id })
                 followingIds = newFollowingIds
                 followingUsers = newDiscovered.filter { newFollowingIds.contains($0.id) }
-                print("[SocialService] followingUsers count: \(followingUsers.count)")
+                print("[SocialService] followingUsers: \(followingUsers.count), followingIds: \(followingIds.count)")
             }
 
             discoveredUsers = newDiscovered
@@ -128,5 +137,13 @@ final class SocialService {
             print("[SocialService] Error loading users: \(error)")
             errorMessage = error.localizedDescription
         }
+    }
+
+    func getFollowingUserIds() -> [String] {
+        Array(followingIds)
+    }
+
+    func getAllUserIds() -> [String] {
+        discoveredUsers.map { $0.id } + (supabase.currentUserId.map { [$0] } ?? [])
     }
 }

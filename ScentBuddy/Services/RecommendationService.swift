@@ -12,11 +12,14 @@ final class RecommendationService {
         isLoading = true
         defer { isLoading = false }
 
+        print("[Recommendations] Starting with \(perfumes.count) perfumes, API key length: \(Self.apiKey.count)")
+
         let notePrefs = OnboardingManager.shared.notePreferences.favoriteNotes
         let tasteProfile = buildTasteProfile(perfumes: perfumes, wearEntries: wearEntries, notePrefs: notePrefs)
         let userPrefs = extractUserPreferences(perfumes: perfumes)
 
         let searchTerms = buildSearchTerms(perfumes: perfumes, notePrefs: notePrefs, tasteProfile: tasteProfile)
+        print("[Recommendations] Search terms: \(searchTerms)")
 
         var allCandidates: [FragellaCandidate] = []
         var seenKeys: Set<String> = []
@@ -37,8 +40,11 @@ final class RecommendationService {
             }
         }
 
+        print("[Recommendations] Got \(allCandidates.count) candidates from search terms")
+
         if allCandidates.isEmpty {
             let fallbackTerms = ["sauvage", "baccarat rouge", "aventus", "bleu de chanel", "tobacco vanille", "black opium", "good girl", "light blue"]
+            print("[Recommendations] No candidates, trying fallbacks...")
             for term in fallbackTerms {
                 let results = await searchFragella(query: term)
                 for candidate in results {
@@ -48,6 +54,7 @@ final class RecommendationService {
                     }
                 }
             }
+            print("[Recommendations] After fallback: \(allCandidates.count) candidates")
         }
 
         let ownedSet = Set(perfumes.map { "\($0.name.lowercased())|\($0.brand.lowercased())" })
@@ -77,6 +84,21 @@ final class RecommendationService {
 
             if score > 0 {
                 scored.append((candidate, score, reason))
+            } else if tasteProfile.isEmpty {
+                let noteList = candidate.allNotes.prefix(3).joined(separator: ", ")
+                let fallbackReason = noteList.isEmpty ? "Popular fragrance" : "Features \(noteList)"
+                scored.append((candidate, 1.0, fallbackReason))
+            }
+        }
+
+        if scored.isEmpty && !allCandidates.isEmpty {
+            print("[Recommendations] No scored candidates, using all as-is")
+            for candidate in allCandidates.prefix(15) {
+                let key = "\(candidate.name.lowercased())|\(candidate.brand.lowercased())"
+                guard !ownedSet.contains(key) else { continue }
+                let noteList = candidate.allNotes.prefix(3).joined(separator: ", ")
+                let reason = noteList.isEmpty ? "Popular fragrance" : "Features \(noteList)"
+                scored.append((candidate, 1.0, reason))
             }
         }
 
@@ -111,6 +133,7 @@ final class RecommendationService {
             if results.count >= 9 { break }
         }
 
+        print("[Recommendations] Final results: \(results.count)")
         return rotateResults(results)
     }
 
@@ -151,7 +174,10 @@ final class RecommendationService {
     }
 
     private func searchFragella(query: String) async -> [FragellaCandidate] {
-        guard !Self.apiKey.isEmpty else { return [] }
+        guard !Self.apiKey.isEmpty else {
+            print("[Recommendations] API key is empty, cannot search")
+            return []
+        }
 
         var components = URLComponents(string: "\(Self.baseURL)/fragrances")
         components?.queryItems = [
@@ -168,9 +194,14 @@ final class RecommendationService {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-            guard statusCode == 200 else { return [] }
-            return parseCandidates(from: data)
+            guard statusCode == 200 else {
+                print("[Recommendations] Fragella search '\(query)' failed with status \(statusCode)")
+                return []
+            }
+            let candidates = parseCandidates(from: data)
+            return candidates
         } catch {
+            print("[Recommendations] Fragella search '\(query)' error: \(error.localizedDescription)")
             return []
         }
     }
