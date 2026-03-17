@@ -370,6 +370,7 @@ final class SupabaseService {
     }
 
     func signOut() async {
+        await clearDeviceToken()
         if let token = accessToken, !supabaseURL.isEmpty, let logoutURL = URL(string: "\(supabaseURL)/auth/v1/logout") {
             var request = URLRequest(url: logoutURL)
             request.httpMethod = "POST"
@@ -960,47 +961,84 @@ final class SupabaseService {
     func insertNotification(_ notification: AppNotificationInsert) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
         await refreshTokenIfNeeded()
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications") else { return }
-        var request = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
-        request.httpBody = try JSONEncoder().encode(notification)
-        print("[SupabaseService] Inserting notification: \(notification.notification_type) for user \(notification.user_id)")
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/rpc/create_notification") else { return }
+        var request = authenticatedRequest(url: url, method: "POST")
+        var body: [String: Any] = [
+            "p_user_id": notification.user_id,
+            "p_from_user_id": notification.from_user_id,
+            "p_type": notification.notification_type
+        ]
+        if let message = notification.message { body["p_message"] = message }
+        if let name = notification.perfume_name { body["p_perfume_name"] = name }
+        if let brand = notification.perfume_brand { body["p_perfume_brand"] = brand }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        print("[SupabaseService] Sending notification via RPC: \(notification.notification_type) for user \(notification.user_id)")
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse {
-            print("[SupabaseService] Notification insert status: \(http.statusCode)")
+            print("[SupabaseService] Notification RPC status: \(http.statusCode)")
             if http.statusCode == 401 {
                 await refreshTokenIfNeeded()
-                var retryRequest = authenticatedRequest(url: url, method: "POST", prefer: "return=minimal")
-                retryRequest.httpBody = try JSONEncoder().encode(notification)
+                var retryRequest = authenticatedRequest(url: url, method: "POST")
+                retryRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
                 let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
                 if let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode >= 400 {
                     let bodyStr = String(data: retryData, encoding: .utf8) ?? ""
-                    print("[SupabaseService] Notification retry failed (\(retryHttp.statusCode)): \(bodyStr)")
+                    print("[SupabaseService] Notification RPC retry failed (\(retryHttp.statusCode)): \(bodyStr)")
                 }
             } else if http.statusCode >= 400 {
                 let bodyStr = String(data: data, encoding: .utf8) ?? ""
-                print("[SupabaseService] Notification insert failed (\(http.statusCode)): \(bodyStr)")
+                print("[SupabaseService] Notification RPC failed (\(http.statusCode)): \(bodyStr)")
             }
         }
     }
 
     func markNotificationsRead(userId: String) async throws {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false") else { return }
+        let readUrl = "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&read=eq.false"
+        let isReadUrl = "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false"
+        for urlStr in [readUrl, isReadUrl] {
+            guard let url = URL(string: urlStr) else { continue }
+            let readBody = urlStr.contains("is_read") ? ["is_read": true] : ["read": true]
+            var request = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
+            request.httpBody = try JSONEncoder().encode(readBody)
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+                await refreshTokenIfNeeded()
+                var retryRequest = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
+                retryRequest.httpBody = try JSONEncoder().encode(readBody)
+                _ = try? await URLSession.shared.data(for: retryRequest)
+            }
+        }
+    }
+
+    func saveDeviceToken(_ token: String) async {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, let userId = currentUserId else { return }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?id=eq.\(userId)") else { return }
         var request = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
-        let body: [String: Bool] = ["is_read": true]
-        request.httpBody = try JSONEncoder().encode(body)
-        let (_, response) = try await URLSession.shared.data(for: request)
-        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["apns_device_token": token])
+        guard let (_, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse else { return }
+        print("[SupabaseService] Save device token status: \(http.statusCode)")
+        if http.statusCode == 401 {
             await refreshTokenIfNeeded()
             var retryRequest = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
-            retryRequest.httpBody = try JSONEncoder().encode(body)
+            retryRequest.httpBody = try? JSONSerialization.data(withJSONObject: ["apns_device_token": token])
             _ = try? await URLSession.shared.data(for: retryRequest)
         }
     }
 
+    func clearDeviceToken() async {
+        guard !supabaseURL.isEmpty, !supabaseKey.isEmpty, let userId = currentUserId else { return }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/profiles?id=eq.\(userId)") else { return }
+        var request = authenticatedRequest(url: url, method: "PATCH", prefer: "return=minimal")
+        let nullBody: [String: String?] = ["apns_device_token": nil]
+        request.httpBody = try? JSONEncoder().encode(nullBody)
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
     func fetchUnreadNotificationCount(userId: String) async throws -> Int {
         guard !supabaseURL.isEmpty, !supabaseKey.isEmpty else { return 0 }
-        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&is_read=eq.false&select=id") else { return 0 }
+        guard let url = URL(string: "\(supabaseURL)/rest/v1/notifications?user_id=eq.\(userId)&read=eq.false&select=id") else { return 0 }
         var request = authenticatedRequest(url: url)
         request.setValue("count=exact", forHTTPHeaderField: "Prefer")
         let (data, response) = try await URLSession.shared.data(for: request)

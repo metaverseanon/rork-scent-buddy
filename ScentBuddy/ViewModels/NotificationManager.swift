@@ -25,7 +25,15 @@ final class NotificationManager {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         if settings.authorizationStatus == .notDetermined {
             let granted = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
-            print("[NotificationManager] Permission requested, granted: \(granted ?? false)")
+            if granted == true {
+                await MainActor.run {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        } else if settings.authorizationStatus == .authorized {
+            await MainActor.run {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
         }
     }
 
@@ -37,7 +45,7 @@ final class NotificationManager {
             await checkAndSendPushNotifications()
 
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(15))
+                try? await Task.sleep(for: .seconds(30))
                 guard !Task.isCancelled else { break }
                 await refreshUnreadCount()
                 await checkAndSendPushNotifications()
@@ -59,7 +67,7 @@ final class NotificationManager {
             notifications = try await supabase.fetchNotifications(userId: userId)
             unreadCount = notifications.filter { $0.is_read != true }.count
 
-            let uniqueUserIds = Set(notifications.map { $0.from_user_id })
+            let uniqueUserIds = Set(notifications.compactMap { $0.from_user_id.isEmpty ? nil : $0.from_user_id })
             for uid in uniqueUserIds where profileCache[uid] == nil {
                 if let profile = try? await supabase.fetchProfile(userId: uid) {
                     profileCache[uid] = profile
@@ -105,7 +113,6 @@ final class NotificationManager {
                 }
             } else {
                 newNotifications = []
-                print("[NotificationManager] First run, setting baseline timestamp")
             }
 
             if let newestTs = recent.first?.created_at {
@@ -125,7 +132,7 @@ final class NotificationManager {
     }
 
     private func sendLocalPush(for notification: AppNotification) async {
-        if profileCache[notification.from_user_id] == nil {
+        if !notification.from_user_id.isEmpty, profileCache[notification.from_user_id] == nil {
             if let profile = try? await supabase.fetchProfile(userId: notification.from_user_id) {
                 profileCache[notification.from_user_id] = profile
             }
@@ -146,7 +153,7 @@ final class NotificationManager {
             content.body = "\(name) sniffed your \(perfume)"
         default:
             content.title = "ScentBuddy"
-            content.body = "You have a new notification"
+            content.body = notification.message ?? "You have a new notification"
         }
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
@@ -162,7 +169,11 @@ final class NotificationManager {
         guard let userId = supabase.currentUserId else { return }
         do {
             try await supabase.markNotificationsRead(userId: userId)
+            for i in notifications.indices {
+                notifications[i].is_read = true
+            }
             unreadCount = 0
+            UNUserNotificationCenter.current().setBadgeCount(0)
         } catch {
             print("[NotificationManager] Failed to mark read: \(error)")
         }
@@ -173,7 +184,7 @@ final class NotificationManager {
     }
 
     func displayName(for userId: String) -> String {
-        profileCache[userId]?.display_name ?? "Someone"
+        profileCache[userId]?.display_name ?? profileCache[userId]?.username ?? "Someone"
     }
 
     func avatarEmoji(for userId: String) -> String {
