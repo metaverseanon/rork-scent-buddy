@@ -3,6 +3,7 @@ import SwiftData
 import UserNotifications
 import UIKit
 
+
 @main
 struct ScentBuddyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
