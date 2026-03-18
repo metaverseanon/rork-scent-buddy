@@ -9,6 +9,7 @@ struct DashboardView: View {
     @State private var appearAnimated: Bool = false
     @State private var notificationManager = NotificationManager.shared
     @State private var showNotifications: Bool = false
+    @State private var communityPicksService = CommunityPicksService()
     private let scentService = ScentOfTheDayService()
     private var theme: AppTheme { AppearanceManager.shared.theme }
 
@@ -40,6 +41,10 @@ struct DashboardView: View {
                 featuresGrid
                     .opacity(appearAnimated ? 1 : 0)
                     .offset(y: appearAnimated ? 0 : 24)
+
+                communityPicksPreview
+                    .opacity(appearAnimated ? 1 : 0)
+                    .offset(y: appearAnimated ? 0 : 26)
 
                 if !perfumes.isEmpty {
                     recentCollectionSection
@@ -95,6 +100,7 @@ struct DashboardView: View {
             )
             SyncOptimizationService.shared.syncIfNeeded(perfumes: perfumes, wishlist: wishlist)
             await notificationManager.refreshUnreadCount()
+            await communityPicksService.fetchCommunityPicks()
         }
     }
 
@@ -235,12 +241,53 @@ struct DashboardView: View {
                 gradient: [.cyan, .blue]
             )
             FeatureTile(
+                destination: CommunityPicksView(),
+                icon: "chart.bar.fill",
+                title: "Community",
+                subtitle: "This week",
+                gradient: [.orange, .yellow]
+            )
+            FeatureTile(
                 destination: CollectionCardView(),
                 icon: "rectangle.portrait.on.rectangle.portrait.angled.fill",
                 title: "Share Card",
                 subtitle: "Show off",
                 gradient: [.indigo, .purple]
             )
+        }
+    }
+
+    private var communityPicksPreview: some View {
+        Group {
+            if !communityPicksService.picks.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "flame.fill")
+                                .foregroundStyle(.orange)
+                            Text("Hot This Week")
+                                .font(.headline)
+                        }
+                        Spacer()
+                        NavigationLink {
+                            CommunityPicksView()
+                        } label: {
+                            Text("See All")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.orange)
+                        }
+                    }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(communityPicksService.picks.prefix(8)) { pick in
+                                CommunityPickPreviewCard(pick: pick)
+                            }
+                        }
+                    }
+                    .contentMargins(.horizontal, 0)
+                }
+            }
         }
     }
 
@@ -332,6 +379,80 @@ struct FeatureTile<Destination: View>: View {
             .clipShape(.rect(cornerRadius: 16))
         }
         .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+struct CommunityPickPreviewCard: View {
+    let pick: CommunityPick
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .topLeading) {
+                Color(.secondarySystemBackground)
+                    .frame(width: 110, height: 90)
+                    .overlay {
+                        if let urlStr = pick.imageURL, let url = URL(string: urlStr) {
+                            AsyncImage(url: url) { phase in
+                                if let image = phase.image {
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } else {
+                                    pickGradient
+                                }
+                            }
+                            .allowsHitTesting(false)
+                        } else {
+                            pickGradient
+                        }
+                    }
+                    .clipShape(.rect(cornerRadius: 12))
+
+                if pick.rank <= 3 {
+                    Text(pick.rank == 1 ? "🥇" : pick.rank == 2 ? "🥈" : "🥉")
+                        .font(.caption)
+                        .padding(4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(.rect(cornerRadius: 6))
+                        .padding(4)
+                }
+            }
+
+            Text(pick.perfumeName)
+                .font(.caption.bold())
+                .lineLimit(1)
+            Text(pick.perfumeBrand)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            HStack(spacing: 2) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 8))
+                Text("\(pick.addCount)")
+                    .font(.caption2.bold())
+            }
+            .foregroundStyle(.orange)
+        }
+        .frame(width: 110)
+    }
+
+    private var pickGradient: some View {
+        let hash = abs(pick.perfumeName.hashValue)
+        let gradients: [[Color]] = [
+            [.purple.opacity(0.7), .indigo.opacity(0.5)],
+            [.pink.opacity(0.6), .orange.opacity(0.4)],
+            [.blue.opacity(0.6), .teal.opacity(0.4)],
+            [.orange.opacity(0.7), .red.opacity(0.4)],
+        ]
+        let colors = gradients[hash % gradients.count]
+        return Rectangle()
+            .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+            .overlay {
+                Image(systemName: "drop.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white.opacity(0.3))
+            }
     }
 }
 
