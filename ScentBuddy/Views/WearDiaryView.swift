@@ -41,6 +41,8 @@ struct WearDiaryView: View {
                         ))
                 }
 
+                WearStreakView(wearEntries: wearEntries)
+
                 statsSection
 
                 calendarSection
@@ -156,8 +158,8 @@ struct WearDiaryView: View {
                 color: .teal
             )
             DiaryStatCard(
-                value: currentStreak,
-                label: "Streak",
+                value: "\(wearsThisMonth)",
+                label: "This Month",
                 icon: "flame.fill",
                 color: .orange
             )
@@ -251,32 +253,12 @@ struct WearDiaryView: View {
         Set(wearEntries.map { $0.perfumeName }).count
     }
 
-    private var currentStreak: String {
-        var streak = 0
-        var checkDate = Date()
-        let today = calendar.startOfDay(for: Date())
-
-        let hasEntryToday = wearEntries.contains {
-            calendar.isDate($0.date, inSameDayAs: today)
-        }
-        if !hasEntryToday {
-            checkDate = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-        }
-
-        while true {
-            let dayStart = calendar.startOfDay(for: checkDate)
-            let hasEntry = wearEntries.contains {
-                calendar.isDate($0.date, inSameDayAs: dayStart)
-            }
-            if hasEntry {
-                streak += 1
-                checkDate = calendar.date(byAdding: .day, value: -1, to: dayStart) ?? dayStart
-            } else {
-                break
-            }
-        }
-
-        return "\(streak)d"
+    private var wearsThisMonth: Int {
+        let components = calendar.dateComponents([.year, .month], from: Date())
+        return wearEntries.filter {
+            let entryComponents = calendar.dateComponents([.year, .month], from: $0.date)
+            return entryComponents.year == components.year && entryComponents.month == components.month
+        }.count
     }
 
     private var dayNumbers: [Int] {

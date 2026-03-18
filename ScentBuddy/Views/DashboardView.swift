@@ -29,9 +29,13 @@ struct DashboardView: View {
                         .offset(y: appearAnimated ? 0 : 16)
                 }
 
-                quickStatsRow
+                WearStreakView(wearEntries: wearEntries)
                     .opacity(appearAnimated ? 1 : 0)
                     .offset(y: appearAnimated ? 0 : 20)
+
+                quickStatsRow
+                    .opacity(appearAnimated ? 1 : 0)
+                    .offset(y: appearAnimated ? 0 : 22)
 
                 featuresGrid
                     .opacity(appearAnimated ? 1 : 0)
