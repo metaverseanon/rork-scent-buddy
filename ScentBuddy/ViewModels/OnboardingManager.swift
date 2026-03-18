@@ -14,7 +14,16 @@ final class OnboardingManager {
         didSet { savePreferences() }
     }
 
+    var tasteProfile: TasteProfile {
+        didSet { saveTasteProfileData() }
+    }
+
+    var hasTasteProfile: Bool {
+        tasteProfile.completedAt != nil
+    }
+
     private let prefsKey = "note_preferences"
+    private let tasteProfileKey = "taste_profile"
 
     private init() {
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "has_completed_onboarding")
@@ -24,6 +33,12 @@ final class OnboardingManager {
         } else {
             self.notePreferences = NotePreferences()
         }
+        if let data = UserDefaults.standard.data(forKey: tasteProfileKey),
+           let saved = try? JSONDecoder().decode(TasteProfile.self, from: data) {
+            self.tasteProfile = saved
+        } else {
+            self.tasteProfile = TasteProfile()
+        }
     }
 
     func completeOnboarding(with favoriteNotes: [String]) {
@@ -31,9 +46,24 @@ final class OnboardingManager {
         hasCompletedOnboarding = true
     }
 
+    func saveTasteProfile(_ profile: TasteProfile) {
+        tasteProfile = profile
+        notePreferences = NotePreferences(
+            favoriteNotes: profile.preferredNotes,
+            completedOnboarding: true
+        )
+        hasCompletedOnboarding = true
+    }
+
     private func savePreferences() {
         if let data = try? JSONEncoder().encode(notePreferences) {
             UserDefaults.standard.set(data, forKey: prefsKey)
+        }
+    }
+
+    private func saveTasteProfileData() {
+        if let data = try? JSONEncoder().encode(tasteProfile) {
+            UserDefaults.standard.set(data, forKey: tasteProfileKey)
         }
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @State private var currentPage: Int = 0
-    @State private var showNotesPicker: Bool = false
+    @State private var showTasteQuiz: Bool = false
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
@@ -56,8 +56,8 @@ struct OnboardingView: View {
             bottomSection
         }
         .background(Color(.systemBackground))
-        .fullScreenCover(isPresented: $showNotesPicker) {
-            NotePreferenceView()
+        .fullScreenCover(isPresented: $showTasteQuiz) {
+            TasteQuizView(isOnboarding: true)
         }
     }
 
@@ -113,7 +113,7 @@ struct OnboardingView: View {
 
             if currentPage == pages.count - 1 {
                 Button {
-                    showNotesPicker = true
+                    showTasteQuiz = true
                 } label: {
                     Text("Get Started")
                         .font(.headline)
@@ -127,7 +127,7 @@ struct OnboardingView: View {
             } else {
                 HStack {
                     Button {
-                        showNotesPicker = true
+                        showTasteQuiz = true
                     } label: {
                         Text("Skip")
                             .font(.subheadline)

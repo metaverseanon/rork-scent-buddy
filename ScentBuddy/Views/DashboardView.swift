@@ -241,6 +241,13 @@ struct DashboardView: View {
                 gradient: [.cyan, .blue]
             )
             FeatureTile(
+                destination: TasteProfileView(),
+                icon: "wand.and.stars",
+                title: "Taste Quiz",
+                subtitle: OnboardingManager.shared.hasTasteProfile ? "View profile" : "Find your style",
+                gradient: [.orange, .pink]
+            )
+            FeatureTile(
                 destination: CommunityPicksView(),
                 icon: "chart.bar.fill",
                 title: "Community",

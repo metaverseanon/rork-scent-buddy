@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     private var currentTheme: AppTheme { AppearanceManager.shared.theme }
     @State private var showingNotePreferences: Bool = false
+    @State private var showingTasteQuiz: Bool = false
     @State private var showingChangeEmail: Bool = false
     @State private var showingChangePassword: Bool = false
     @State private var notificationService = NotificationService.shared
@@ -139,7 +140,7 @@ struct SettingsView: View {
 
             Section("Preferences") {
                 Button {
-                    showingNotePreferences = true
+                    showingTasteQuiz = true
                 } label: {
                     HStack(spacing: 14) {
                         Image(systemName: "wand.and.stars")
@@ -147,6 +148,29 @@ struct SettingsView: View {
                             .foregroundStyle(.white)
                             .frame(width: 32, height: 32)
                             .background(.orange.gradient, in: .rect(cornerRadius: 8))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Taste Profile Quiz")
+                                .foregroundStyle(.primary)
+                            Text(OnboardingManager.shared.hasTasteProfile ? OnboardingManager.shared.tasteProfile.profileName : "Take the quiz")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                Button {
+                    showingNotePreferences = true
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.body)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(.pink.gradient, in: .rect(cornerRadius: 8))
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Note Preferences")
                                 .foregroundStyle(.primary)
@@ -242,6 +266,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .sheet(isPresented: $showingNotePreferences) {
             NotePreferenceView()
+        }
+        .fullScreenCover(isPresented: $showingTasteQuiz) {
+            TasteQuizView(isOnboarding: false) { _ in
+                showingTasteQuiz = false
+            }
         }
         .sheet(isPresented: $showingChangeEmail) {
             ChangeEmailView(currentEmail: UserProfileManager.shared.profile.email)

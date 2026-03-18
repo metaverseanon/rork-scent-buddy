@@ -15,7 +15,9 @@ final class RecommendationService {
         print("[Recommendations] Starting with \(perfumes.count) perfumes, API key length: \(Self.apiKey.count)")
 
         let notePrefs = OnboardingManager.shared.notePreferences.favoriteNotes
-        let tasteProfile = buildTasteProfile(perfumes: perfumes, wearEntries: wearEntries, notePrefs: notePrefs)
+        let quizNotes = OnboardingManager.shared.tasteProfile.preferredNotes
+        let combinedNotes = Array(Set(notePrefs + quizNotes))
+        let tasteProfile = buildTasteProfile(perfumes: perfumes, wearEntries: wearEntries, notePrefs: combinedNotes)
         let userPrefs = extractUserPreferences(perfumes: perfumes)
 
         let searchTerms = buildSearchTerms(perfumes: perfumes, notePrefs: notePrefs, tasteProfile: tasteProfile)
